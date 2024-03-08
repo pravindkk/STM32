@@ -1,5 +1,5 @@
 
-#include "ICM20948.h"
+#include "../Inc/ICM20948.h"
 
 #define X 0
 #define Y 1
