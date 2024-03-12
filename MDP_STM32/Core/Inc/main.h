@@ -55,7 +55,7 @@ extern "C" {
 
 //#define DIST_M 1.14117166
 //#define DIST_C 1.232534228
-#define DIST_M 1.188067316
+#define DIST_M 1.198067316
 #define DIST_C 0.965311399
 
 #define INIT_DUTY_SPT_L 1200
