@@ -235,7 +235,7 @@ CmdConfig cfgs[19] = {
 
 	{500, 1700, 30, 90, DIR_FORWARD}, // FL00
 	{1800, 100, 115 ,-90, DIR_FORWARD}, // FR00
-	{100, 1800, 15, -90, DIR_BACKWARD}, // BL00
+	{100, 1800, 30, -89, DIR_BACKWARD}, // BL00
 	{1800, 100, 115, 90, DIR_BACKWARD}, // BR00,
 
 	{800, 1800, 30, 89, DIR_FORWARD}, // FL20
@@ -346,10 +346,12 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 			Is_First_Captured = 0; // set it back to false
 
 			// set polarity to rising edge
-			  snprintf(US_dist, sizeof(US_dist), "dist: %3.2lf", (float) obsDist_US);
+//			  snprintf(US_dist, sizeof(US_dist), "dist: %3.2lf", (float) obsDist_US);
+//			  OLED_ShowString(0, 50, (char *) US_dist);
+//			  OLED_Refresh_Gram();
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_2, TIM_INPUTCHANNELPOLARITY_RISING);
-			HAL_TIM_Base_Stop_IT(&htim4);
-//			__HAL_TIM_DISABLE_IT(&htim4, TIM_IT_CC2);
+//			HAL_TIM_Base_Stop_IT(&htim4);
+			__HAL_TIM_DISABLE_IT(&htim4, TIM_IT_CC2);
 
 //			if (recordAngleOnOvershoot) { // for fastest path challenge
 //
@@ -1161,7 +1163,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart) {
 	else if (aRxBuffer[0] == 'I' && aRxBuffer[1] == 'R') __ADD_COMMAND(cQueue, 13, val); // test IR sensor
 	else if (aRxBuffer[0] == 'D' && aRxBuffer[1] == 'T') __ADD_COMMAND(cQueue, 14, val); // DT move until specified distance from obstacle
 	else if (aRxBuffer[0] == 'Z' && aRxBuffer[1] == 'Z') __ADD_COMMAND(cQueue, 15, val); // ZZ buzzer
-	else if (aRxBuffer[0] == 'W' && aRxBuffer[1] == 'X') __ADD_COMMAND(cQueue, 16, val); // WN fastest path
+	else if (aRxBuffer[0] == 'W' && aRxBuffer[1] == 'X') __ADD_COMMAND(cQueue, 16, val); // WX fastest path
 	else if (aRxBuffer[0] == 'W' && aRxBuffer[1] == 'N') __ADD_COMMAND(cQueue, 17, val); // WN fastest path v2
 	else if (aRxBuffer[0] == 'A') __ADD_COMMAND(cQueue, 88, val); // anti-clockwise rotation with variable
 	else if (aRxBuffer[0] == 'C') __ADD_COMMAND(cQueue, 89, val); // clockwise rotation with variable
@@ -1244,7 +1246,7 @@ void StraightLineMove(const uint8_t speedMode) {
 void StraightLineMoveSpeedScale(const uint8_t speedMode, float * speedScale) {
 	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ); // polling
 	dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? 1 : -1; // use only one of the wheel to determine car direction
-	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ * 0.01); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 	if (speedMode == SPEED_MODE_1) __PID_SPEED_1(pidSlow, angleNow, correction, dir, newDutyL, newDutyR);
 	else if (speedMode == SPEED_MODE_2) __PID_SPEED_2(pidFast, angleNow, correction, dir, newDutyL, newDutyR);
 
@@ -1296,35 +1298,33 @@ void RobotMoveDistObstacle(float * targetDist, const uint8_t speedMode) {
 	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
 	last_curTask_tick = HAL_GetTick();
 
-//	do {
-//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
-//	  __delay_us(&htim4, 10); // wait for 10us
-//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
+	do {
+	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
+	  __delay_us(&htim4, 10); // wait for 10us
+	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
 //	  HAL_TIM_Base_Start_IT(&htim4);
-////	  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
-//	  osDelay(10); // give timer interrupt chance to update obsDist_US value
-//	  snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
-//	  OLED_ShowString(0, 20, (char *) US_dist);
-//	  OLED_Refresh_Gram();
-//	  if (abs(*targetDist - obsDist_US) < 0.1) break;
-//	  __SET_MOTOR_DIRECTION(obsDist_US >= *targetDist);
-//	  if (HAL_GetTick() - last_curTask_tick >=20) {
-////		  speedScale = 1;
-//		  if (speedMode == SPEED_MODE_1) {
-//			  speedScale = abs(obsDist_US - *targetDist) / 15; // slow down at 15cm
-//			  speedScale = speedScale > 1 ? 1 : (speedScale < 0.75 ? 0.75 : speedScale);
-//			  StraightLineMoveSpeedScale(SPEED_MODE_1, &speedScale);
-//		  } else {
-//			  speedScale = abs(obsDist_US - *targetDist) / 15; // slow down at 15cm
-//			  speedScale = speedScale > 1 ? 1 : (speedScale < 0.4 ? 0.4 : speedScale);
-//			  StraightLineMoveSpeedScale(SPEED_MODE_2, &speedScale);
-//		  }
-//
-//
-//		  last_curTask_tick = HAL_GetTick();
-//	  }
-//
-//	} while (1);
+	  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
+	  osDelay(10); // give timer interrupt chance to update obsDist_US value
+
+	  if (fabs(obsDist_US - *targetDist) < 0.1) break;
+	  __SET_MOTOR_DIRECTION( obsDist_US >= *targetDist - 0.1);
+	  if (HAL_GetTick() - last_curTask_tick >=10) {
+//		  speedScale = 1;
+		  if (speedMode == SPEED_MODE_1) {
+			  speedScale = abs(obsDist_US - *targetDist) / 15; // slow down at 15cm
+			  speedScale = speedScale > 1 ? 1 : (speedScale < 0.75 ? 0.75 : speedScale);
+			  StraightLineMoveSpeedScale(SPEED_MODE_1, &speedScale);
+		  } else {
+			  speedScale = abs(obsDist_US - *targetDist) / 15; // slow down at 15cm
+			  speedScale = speedScale > 1 ? 1 : (speedScale < 0.4 ? 0.4 : speedScale);
+			  StraightLineMoveSpeedScale(SPEED_MODE_2, &speedScale);
+		  }
+
+
+		  last_curTask_tick = HAL_GetTick();
+	  }
+
+	} while (1);
 
 	__SET_MOTOR_DUTY(&htim8, 0, 0);
 	HAL_TIM_IC_Stop_IT(&htim4, TIM_CHANNEL_2);
@@ -1543,27 +1543,33 @@ void runOledTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-	snprintf(ch, sizeof(ch), "%-3d%%", (int)batteryVal);
+//	snprintf(ch, sizeof(ch), "%-3d%%", (int)batteryVal);
 
 	int angleTemp = angleNow / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 	snprintf(ch, sizeof(ch), "angle:%-4d", (int) angleTemp);
 	OLED_ShowString(0, 0, (char *) ch);
+
+	if (curTask == TASK_FASTESTPATH)
+	{
+		snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
+		OLED_ShowString(0, 20, (char *) US_dist);
+	}
+//	OLED_ShowString(0, 0, (char *) ch);
 //	OLED_ShowString(0, 12, (char *) rxMsg);
 //	OLED_ShowString(0, 24, (char *) aRxBuffer);
-	snprintf(US_dist, sizeof(US_dist), "dist: %3.2lf", (float) obsDist_US);
-	OLED_ShowString(0, 20, (char *) US_dist);
-	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
-	do {
-	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
-	  __delay_us(&htim4, 10); // wait for 10us
-	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
-	  HAL_TIM_Base_Start_IT(&htim4);
+//	snprintf(US_dist, sizeof(US_dist), "dist: %3.2lf", (float) obsDist_US);
+//	OLED_ShowString(0, 20, (char *) US_dist);
+//	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
+//	do {
+//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
+//	  __delay_us(&htim4, 10); // wait for 10us
+//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
+////	  HAL_TIM_Base_Start_IT(&htim4);
 //	  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
-	  osDelay(10); // give timer interrupt chance to update obsDist_US value
-	  snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
-	  OLED_ShowString(0, 20, (char *) US_dist);
-	  OLED_Refresh_Gram();
-	} while (1);
+//	  osDelay(10); // give timer interrupt chance to update obsDist_US value
+
+//	  OLED_Refresh_Gram();
+//	} while (1);
 //	snprintf(ch, sizeof(ch), "l:%-3d|r:%-3d", (int)angle_left, (int)angle_right);
 //	snprintf(ch, sizeof(ch), "ir:%-5d", (int)obsDist_IR);
 //	OLED_ShowString(0, 12, (char *) ch);

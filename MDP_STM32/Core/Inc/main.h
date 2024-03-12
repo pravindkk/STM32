@@ -55,6 +55,7 @@ extern "C" {
 #define SPEED_MODE_1 1
 #define SPEED_MODE_2 2
 
+//#define DIST_M 1.170067316
 #define DIST_M 1.170067316
 #define DIST_C 0.965311399
 
