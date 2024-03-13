@@ -46,17 +46,16 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 #define PI 3.141592654
-#define WHEEL_LENGTH 20
+#define WHEEL_LENGTH 20.4
 #define PPR 330
 // distance calibration params
-//#define DIST_M 1.14117166
-//#define DIST_C 1.232534228
 #define SPEED_MODE_T 0
 #define SPEED_MODE_1 1
 #define SPEED_MODE_2 2
 
-//#define DIST_M 1.170067316
-#define DIST_M 1.170067316
+//#define DIST_M 1.14117166
+//#define DIST_C 1.232534228
+#define DIST_M 1.198067316
 #define DIST_C 0.965311399
 
 #define INIT_DUTY_SPT_L 1200
