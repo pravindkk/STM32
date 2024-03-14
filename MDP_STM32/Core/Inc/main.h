@@ -55,7 +55,7 @@ extern "C" {
 
 //#define DIST_M 1.14117166
 //#define DIST_C 1.232534228
-#define DIST_M 1.198067316
+#define DIST_M 1.178067316
 #define DIST_C 0.965311399
 
 #define INIT_DUTY_SPT_L 1200
@@ -74,8 +74,8 @@ extern "C" {
 #define DIR_BACKWARD 0
 
 #define SERVO_LEFT_MAX 15
-#define SERVO_CENTER 49
-#define SERVO_RIGHT_MAX 115
+#define SERVO_CENTER 50
+#define SERVO_RIGHT_MAX 130
 
 #define IR_CONST_A 25644.81557
 #define IR_CONST_B 260.4233354

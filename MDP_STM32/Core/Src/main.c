@@ -208,7 +208,7 @@ typedef struct _commandConfig {
 	uint8_t direction;
 } CmdConfig;
 
-#define CONFIG_FL00 7D
+#define CONFIG_FL00 7
 #define CONFIG_FR00 8
 #define CONFIG_BL00 9
 #define CONFIG_BR00 10
@@ -223,6 +223,7 @@ typedef struct _commandConfig {
 #define CONFIG_BL30 17
 #define CONFIG_BR30 18
 
+// Radius
 CmdConfig cfgs[19] = {
 	{0,0,SERVO_CENTER,0, DIR_FORWARD}, // STOP
 	{1200, 1200, SERVO_CENTER, 0, DIR_FORWARD}, // FW00
@@ -233,15 +234,15 @@ CmdConfig cfgs[19] = {
 	{800, 1200, 30, 0, DIR_BACKWARD}, // BL--
 	{1200, 800, 115, 0, DIR_BACKWARD}, // BR--
 
-	{800, 1800, 30, 90, DIR_FORWARD}, // FL00
-	{1800, 350, 115 ,-90, DIR_FORWARD}, // FR00
-	{150, 1800, 30, -90, DIR_BACKWARD}, // BL00
-	{1800, 300, 115, 90, DIR_BACKWARD}, // BR00,
+	{500, 1800, 30, 85, DIR_FORWARD}, // FL00
+	{2300, 150, 115 ,-89.5, DIR_FORWARD}, // FR00
+	{150, 2000, 30, -90, DIR_BACKWARD}, // BL00
+	{2300, 300, 115, 90, DIR_BACKWARD}, // BR00,
 
-	{800, 1800, 30, 89, DIR_FORWARD}, // FL20
-	{1800, 900, 115 ,-87, DIR_FORWARD}, // FR20
-	{700, 1800, 30, -89, DIR_BACKWARD}, // BL20
-	{1800, 700, 115, 89, DIR_BACKWARD}, // BR20,
+	{600, 1800, 30, 88, DIR_FORWARD}, // FL20
+	{1800, 300, 115 ,-88, DIR_FORWARD}, // FR20
+	{150, 1800, 30, -89, DIR_BACKWARD}, // BL20
+	{1800, 200, 115, 90, DIR_BACKWARD}, // BR20,
 
 	{1500, 1500, 30, 87.5, DIR_FORWARD}, // FL30
 	{1500, 1500, 108, -86.5, DIR_FORWARD}, // FR30
@@ -431,7 +432,7 @@ int main(void)
   }
 
   PIDConfigInit(&pidTSlow, 2.5, 0.0,0.8);
-  PIDConfigInit(&pidSlow, 2.5, 0.0,0);
+  PIDConfigInit(&pidSlow, 2.8, 0.0,0);
   PIDConfigInit(&pidFast, 1.5, 0.0,0);
 //  PIDConfigInit(&pidFast, 0.75, 0.0,0);
 
@@ -1260,6 +1261,11 @@ void RobotMoveDist(float * targetDist, const uint8_t dir, const uint8_t speedMod
 	PIDConfigReset(&pidFast);
 	curDistTick = 0;
 
+	if (speedMode == SPEED_MODE_1) {
+		__GET_TARGETTICK(*targetDist-1, targetDistTick);
+	} else {
+		__GET_TARGETTICK(*targetDist, targetDistTick);
+	}
 	__GET_TARGETTICK(*targetDist, targetDistTick);
 
 	last_curTask_tick = HAL_GetTick();
@@ -1979,27 +1985,28 @@ void runFLTask(void *argument)
 			  osDelay(10);
 			  targetDist = 4;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
-			  osDelay(10);
 			  break;
 		  case 20: // FL20 (outdoor 3x1)
-			  targetDist = 3;
+//			  targetDist = 3;
+			  targetDist = 4;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 17;
+			  targetDist = 16;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
 		  default: // FL00 (indoor 3x1) CALIBRATED
-			  targetDist = 3;
+//			  targetDist = 3;
+			  targetDist = 2;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 17;
+			  targetDist = 9.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2045,24 +2052,26 @@ void runFRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // FR20 (outdoor 3x1)
-			  targetDist = 3.5;
+			  //targetDist = 3.5 no battery
+			  targetDist = 5.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FR20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 14;
+			  targetDist = 11;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
 		  default: // FR00 (indoor 3x1) CALIBRATED
-			  targetDist = 3.5;
+			  targetDist = 3;
+			  //targetDist = 3.5 no battery
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FR00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 14;
+			  targetDist = 11;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2107,7 +2116,7 @@ void runBLTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // BL20 (outdoor 3x1)
-			  targetDist = 7;
+			  targetDist = 9;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BL20], &htim8, &htim1, targetAngle);
@@ -2118,13 +2127,13 @@ void runBLTask(void *argument)
 			  osDelay(10);
 			  break;
 		  default: // BL00 (indoor 3x1)
-			  targetDist = 7;
+			  targetDist = 5.7;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 0;
+			  targetDist = 2;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2169,24 +2178,26 @@ void runBRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  case 20: // BR20 (outdoor 3x1)
+			  //targetDist = 7;
 			  targetDist = 7;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR20], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 0;
+			  targetDist = 2;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
 		  default: // BR00 (indoor 3x1)
-			  targetDist = 7;
+			  //targetDist = 7;
+			  targetDist = 6;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle);
 			  osDelay(10);
-			  targetDist = 0;
+			  targetDist = 2.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
