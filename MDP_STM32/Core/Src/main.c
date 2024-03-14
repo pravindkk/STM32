@@ -239,7 +239,7 @@ CmdConfig cfgs[19] = {
 	{150, 2000, 30, -90, DIR_BACKWARD}, // BL00
 	{2300, 300, 115, 90, DIR_BACKWARD}, // BR00,
 
-	{600, 1800, 30, 88, DIR_FORWARD}, // FL20
+	{600, 1800, 30, 89, DIR_FORWARD}, // FL20
 	{1800, 300, 115 ,-88, DIR_FORWARD}, // FR20
 	{150, 1800, 30, -89, DIR_BACKWARD}, // BL20
 	{1800, 200, 115, 90, DIR_BACKWARD}, // BR20,
@@ -432,7 +432,7 @@ int main(void)
   }
 
   PIDConfigInit(&pidTSlow, 2.5, 0.0,0.8);
-  PIDConfigInit(&pidSlow, 2.8, 0.0,0);
+  PIDConfigInit(&pidSlow, 2.5, 0.0,0);
   PIDConfigInit(&pidFast, 1.5, 0.0,0);
 //  PIDConfigInit(&pidFast, 0.75, 0.0,0);
 
