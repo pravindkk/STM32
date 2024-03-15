@@ -85,6 +85,11 @@ extern "C" {
 
 #define SERVO_TURN_TIME 300
 
+// FASTEST PATH CONSTANTS
+#define VERTICAL_TURN_RADIUS 20
+#define HORIZONTAL_TURN_RADIUS 40
+
+
 #define __GET_TARGETTICK(dist, targetTick) ({ \
 	targetTick = (((dist) * DIST_M - DIST_C) / WHEEL_LENGTH * 1320) - 10; \
 })
@@ -298,6 +303,7 @@ void Error_Handler(void);
 #define PWMB_GPIO_Port GPIOC
 #define TRI_Pin GPIO_PIN_4
 #define TRI_GPIO_Port GPIOB
+
 /* USER CODE BEGIN Private defines */
 
 
