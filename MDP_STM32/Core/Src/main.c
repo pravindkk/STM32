@@ -150,6 +150,34 @@ const osThreadAttr_t moveDistObsTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for FPFirstObsTurnL */
+osThreadId_t FPFirstObsTurnLHandle;
+const osThreadAttr_t FPFirstObsTurnL_attributes = {
+  .name = "FPFirstObsTurnL",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for FPFirstObsTurnR */
+osThreadId_t FPFirstObsTurnRHandle;
+const osThreadAttr_t FPFirstObsTurnR_attributes = {
+  .name = "FPFirstObsTurnR",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for FPScndObsTurnL */
+osThreadId_t FPScndObsTurnLHandle;
+const osThreadAttr_t FPScndObsTurnL_attributes = {
+  .name = "FPScndObsTurnL",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for FPScndObsTurnR */
+osThreadId_t FPScndObsTurnRHandle;
+const osThreadAttr_t FPScndObsTurnR_attributes = {
+  .name = "FPScndObsTurnR",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 uint8_t RX_BUFFER_SIZE = 5;
 uint8_t aRxBuffer[10];
@@ -262,6 +290,10 @@ enum TASK_TYPE{
 	TASK_FASTESTPATH,
 	TASK_FASTESTPATH_V2,
 	TASK_BUZZER,
+	TASK_FP_XL,
+	TASK_FP_XR,
+	TASK_FP_YL,
+	TASK_FP_YR,
 	TASK_NONE
 };
 enum TASK_TYPE curTask = TASK_NONE, prevTask = TASK_NONE;
@@ -284,6 +316,10 @@ float batteryVal;
 
 // fastest path variable
 float obs_a, x, angle_left, angle_right;
+
+// fastest path variables --my version
+float horizontal_dist_bef_turn, vertical_distance_to_second_obs;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -311,6 +347,10 @@ void runBRTask(void *argument);
 void runFastestPathTask_V2(void *argument);
 void runBatteryTask(void *argument);
 void runMoveDistObsTask(void *argument);
+void runFPFirstObsTurnLeftTask(void *argument);
+void runFPFirstObsTurnRightTask(void *argument);
+void runFPSecondObsTurnLeftTask(void *argument);
+void runFPSecondObsTurnRightTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 void PIDConfigInit(PIDConfig * cfg, const float Kp, const float Ki, const float Kd);
@@ -335,6 +375,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 		{
 			IC_Val1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_2); // read the first value
 			Is_First_Captured = 1;  // set the first captured as true
+
 			// Now change the polarity to falling edge
 			__HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_2, TIM_INPUTCHANNELPOLARITY_FALLING);
 		}
@@ -512,6 +553,18 @@ int main(void)
   /* creation of moveDistObsTask */
   moveDistObsTaskHandle = osThreadNew(runMoveDistObsTask, NULL, &moveDistObsTask_attributes);
 
+  /* creation of FPFirstObsTurnL */
+  FPFirstObsTurnLHandle = osThreadNew(runFPFirstObsTurnLeftTask, NULL, &FPFirstObsTurnL_attributes);
+
+  /* creation of FPFirstObsTurnR */
+  FPFirstObsTurnRHandle = osThreadNew(runFPFirstObsTurnRightTask, NULL, &FPFirstObsTurnR_attributes);
+
+  /* creation of FPScndObsTurnL */
+  FPScndObsTurnLHandle = osThreadNew(runFPSecondObsTurnLeftTask, NULL, &FPScndObsTurnL_attributes);
+
+  /* creation of FPScndObsTurnR */
+  FPScndObsTurnRHandle = osThreadNew(runFPSecondObsTurnRightTask, NULL, &FPScndObsTurnR_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -548,6 +601,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -559,6 +613,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -591,6 +646,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
+
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc1.Instance = ADC1;
@@ -609,6 +665,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
+
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_11;
@@ -641,6 +698,7 @@ static void MX_ADC2_Init(void)
   /* USER CODE BEGIN ADC2_Init 1 */
 
   /* USER CODE END ADC2_Init 1 */
+
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
   */
   hadc2.Instance = ADC2;
@@ -659,6 +717,7 @@ static void MX_ADC2_Init(void)
   {
     Error_Handler();
   }
+
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
   sConfig.Channel = ADC_CHANNEL_14;
@@ -1047,6 +1106,8 @@ static void MX_USART3_UART_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -1098,6 +1159,8 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
@@ -1163,11 +1226,17 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart) {
 	else if (aRxBuffer[0] == 'T' && aRxBuffer[1] == 'R') __ADD_COMMAND(cQueue, 12, val); // TR turn right max
 	else if (aRxBuffer[0] == 'I' && aRxBuffer[1] == 'R') __ADD_COMMAND(cQueue, 13, val); // test IR sensor
 	else if (aRxBuffer[0] == 'D' && aRxBuffer[1] == 'T') __ADD_COMMAND(cQueue, 14, val); // DT move until specified distance from obstacle
+	else if (aRxBuffer[0] == 'X' && aRxBuffer[1] == 'L') __ADD_COMMAND(cQueue, 18, val); // Fastest Path FIRST obstacle turn LEFT
+	else if (aRxBuffer[0] == 'X' && aRxBuffer[1] == 'R') __ADD_COMMAND(cQueue, 19, val); // Fastest Path FIRST obstacle turn RIGHT
+	else if (aRxBuffer[0] == 'Y' && aRxBuffer[1] == 'L') __ADD_COMMAND(cQueue, 20, val); // Fastest Path SECOND obstacle turn LEFT
+	else if (aRxBuffer[0] == 'Y' && aRxBuffer[1] == 'R') __ADD_COMMAND(cQueue, 21, val); // Fastest Path SECOND obstacle turn RIGHT
 	else if (aRxBuffer[0] == 'Z' && aRxBuffer[1] == 'Z') __ADD_COMMAND(cQueue, 15, val); // ZZ buzzer
 	else if (aRxBuffer[0] == 'W' && aRxBuffer[1] == 'X') __ADD_COMMAND(cQueue, 16, val); // WX fastest path
 	else if (aRxBuffer[0] == 'W' && aRxBuffer[1] == 'N') __ADD_COMMAND(cQueue, 17, val); // WN fastest path v2
 	else if (aRxBuffer[0] == 'A') __ADD_COMMAND(cQueue, 88, val); // anti-clockwise rotation with variable
 	else if (aRxBuffer[0] == 'C') __ADD_COMMAND(cQueue, 89, val); // clockwise rotation with variable
+
+
 
 	if (!__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
 		__READ_COMMAND(cQueue, curCmd, rxMsg);
@@ -1394,6 +1463,14 @@ void RobotTurnFastest(float * targetAngle) {
 
 void FASTESTPATH_TURN_LEFT_90() {
 	targetAngle = 87.5;
+	__SET_SERVO_TURN(&htim1, 50);
+	__SET_MOTOR_DIRECTION(1);
+	__SET_MOTOR_DUTY(&htim8, 1000, 2000);
+	RobotTurn(&targetAngle);
+}
+
+void FASTESTPATH_TURN_LEFT_180() {
+	targetAngle = 177.5;
 	__SET_SERVO_TURN(&htim1, 50);
 	__SET_MOTOR_DIRECTION(1);
 	__SET_MOTOR_DUTY(&htim8, 1000, 2000);
@@ -1663,6 +1740,22 @@ void runCmdTask(void *argument)
 	  		 break;
 	  	 case 17:
 	  		 curTask = TASK_FASTESTPATH_V2;
+	  		__PEND_CURCMD(curCmd);
+	  		 break;
+	  	 case 18:
+	  		 curTask = TASK_FP_XL;
+	  		__PEND_CURCMD(curCmd);
+	  		 break;
+	  	 case 19:
+	  		 curTask = TASK_FP_XR;
+	  		__PEND_CURCMD(curCmd);
+	  		 break;
+	  	 case 20:
+	  		 curTask = TASK_FP_YL;
+	  		__PEND_CURCMD(curCmd);
+	  		 break;
+	  	 case 21:
+	  		 curTask = TASK_FP_YR;
 	  		__PEND_CURCMD(curCmd);
 	  		 break;
 	  	 case 88: // Axxx, rotate left by xxx degree
@@ -2360,6 +2453,412 @@ void runMoveDistObsTask(void *argument)
   /* USER CODE END runMoveDistObsTask */
 }
 
+/* USER CODE BEGIN Header_runFPFirstObsTurnLeftTask */
+/**
+* @brief Function implementing the FPFirstObsTurnL thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_runFPFirstObsTurnLeftTask */
+void runFPFirstObsTurnLeftTask(void *argument)
+{
+  /* USER CODE BEGIN runFPFirstObsTurnLeftTask */
+  /* Infinite loop */
+  for(;;)
+  {
+	  if (curTask != TASK_FP_XL) osDelay(1000);
+	  else
+	  {
+		  /*
+		  Steps to execute when robot in front of first obstacle
+		  Step 1: turn left 90 degree
+		  Step 2: Do a 180 degree turn to right
+		  Step 3: Move in front a bit. Can calibrate later. Or can also remove
+		  this step if the turning radius is large
+		  Step 4: Turn left 90 degrees to face the second obstacle in its center
+		  Step 5: Move in front until the car is 50 cm away from the second obstacle
+		  */
+
+		  // Step 1: turn left 90 degree
+		  FASTESTPATH_TURN_LEFT_90();
+
+		  // Step 2: Do a 180 degree turn to right
+		  FASTESTPATH_TURN_RIGHT_180();
+
+		  // Step 3: Move in front a bit. Can calibrate later. Or can also remove
+		  // this step if the turning radius is large
+		  targetDist = 10;
+		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+
+		  // Step 4: Turn left 90 degrees to face the second obstacle in its center
+		  FASTESTPATH_TURN_LEFT_90();
+
+		  // Step 5: Move in front until the car is 50 cm away from the second obstacle
+		  targetDist = 50;
+		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+
+		  __ON_TASK_END(&htim8, prevTask, curTask);
+
+		  if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
+			  __CLEAR_CURCMD(curCmd);
+			  __ACK_TASK_DONE(&huart3, rxMsg);
+		  } else __READ_COMMAND(cQueue, curCmd, rxMsg);
+	  }
+  }
+  /* USER CODE END runFPFirstObsTurnLeftTask */
+}
+
+/* USER CODE BEGIN Header_runFPFirstObsTurnRightTask */
+/**
+* @brief Function implementing the FPFirstObsTurnR thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_runFPFirstObsTurnRightTask */
+void runFPFirstObsTurnRightTask(void *argument)
+{
+	/* USER CODE BEGIN runFPFirstObsTurnRightTask */
+	/* Infinite loop */
+	for(;;)
+	{
+		if (curTask != TASK_FP_XR) osDelay(1000);
+		else
+		{
+			/*
+			Steps to execute when robot in front of first obstacle
+			Step 1: Turn right 90 degree
+			Step 2: Do a 180 degree turn to left
+			Step 3: Move in front a bit. Can calibrate later. Or can also remove
+			this step if the turning radius is large
+			Step 4: Turn right 90 degrees to face the second obstacle in its center
+			Step 5: Move in front until the car is 50 cm away from the second obstacle
+			*/
+
+			// Step 1: Turn right 90 degree
+			FASTESTPATH_TURN_RIGHT_90();
+
+			// Step 2: Do a 180 degree turn to left
+			FASTESTPATH_TURN_LEFT_180();
+
+			// Step 3: Move in front a bit. Can calibrate later. Or can also remove
+			// this step if the turning radius is large
+			targetDist = 10;
+			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+
+			// Step 4: Turn left 90 degrees to face the second obstacle in its center
+			FASTESTPATH_TURN_RIGHT_90();
+
+			// Step 5: Move in front until the car is 50 cm away from the second obstacle
+			targetDist = 50;
+			RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+
+			 __ON_TASK_END(&htim8, prevTask, curTask);
+
+			if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
+				__CLEAR_CURCMD(curCmd);
+				__ACK_TASK_DONE(&huart3, rxMsg);
+			} else __READ_COMMAND(cQueue, curCmd, rxMsg);
+		}
+	}
+	/* USER CODE END runFPFirstObsTurnRightTask */
+}
+
+/* USER CODE BEGIN Header_runFPSecondObsTurnLeftTask */
+/**
+* @brief Function implementing the FPScndObsTurnL thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_runFPSecondObsTurnLeftTask */
+void runFPSecondObsTurnLeftTask(void *argument)
+{
+  /* USER CODE BEGIN runFPSecondObsTurnLeftTask */
+  /* Infinite loop */
+	// CREATE THESE GLOBAL VARIABLES
+	  // const float HORIZONTAL_TURN_RADIUS
+	  // const float VERTICAL_TURN_RADIUS
+	  // float horizontal_dist_bef_turn = 0;
+	  // float vertical_distance_to_second_obs = 0; //supposed to use as global variable
+
+	  // THINGS TO CHECK
+	  // CHECK IF NEED TO USE BR30 OR OTHER BL FORMS for the Backward right movement
+
+
+	  osDelay(300); //give a short while for US to update value
+	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
+
+	  for(;;)
+	  {
+		  if (curTask != TASK_FP_YL) osDelay(1000);
+		  else
+		  {
+			  /*
+			  Steps to execute when robot in front of SECOND obstacle
+			  Step 1: turn left 90 degree
+			  Step 2: Move straight for 30 cm
+			  Step 3: Turn right 90 Degree. Check using Ultrasonic sensor
+			  if the obstacle is still in front
+			  Step 4: If obstacle is still in front, come BACK RIGHT +++++ MOVE STRAIGHT FOR EXTRA 20CM
+			  and repeat Step 3.
+			  Step 5: If obstacle is not in front, Turn right 90 Degree.
+			  Step 6: Move Straight across obstacle distance to cross over
+			  Step 7: Turn Right 90 Degrees
+			  Step 8: Move Straight until in line with first obstacle
+			  Step 9: Turn Right 90 Degrees
+			  Step 10: Move forward until before turn radius to center
+			  Step 11: Turn Left 90 Degrees to face the parking spot
+			  Step 12: Move until 5 cm before parking spot using UltraSonic sensor
+			  */
+
+			  //  Step 1: turn left 90 degree
+				  FASTESTPATH_TURN_LEFT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+
+			  // Step 2: Move straight for 30 cm
+			  targetDist = 30;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  horizontal_dist_bef_turn += 30;
+
+			  // Step 3: Turn right 90 Degree. Check using Ultrasonic sensor
+			  // if the obstacle is still in front
+			  FASTESTPATH_TURN_RIGHT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+			  osDelay(300); //give a short while for US to update value
+
+
+			  // Step 4: If obstacle is still in front, come BACK RIGHT +++++ MOVE STRAIGHT FOR EXTRA 20CM
+			  // Repeat this until robot not in front of a obstacle
+			  while(obsDist_US <= dist_second_obs)
+			  {
+				// 4.1 Move back right
+				__SET_CMD_CONFIG(cfgs[CONFIG_BR30], &htim8, &htim1, targetAngle);
+					  RobotTurn(&targetAngle);
+					  osDelay(10);
+
+				// determine what's the horizontal dist subtracted when moving BACK RIGHT
+				// will set it to 10 for now
+				vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
+				horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+
+				// 4.2 Go in front 20 cm
+				targetDist = 20;
+					  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+				 horizontal_dist_bef_turn += 20;
+					  osDelay(10);
+
+				// 4.3 Turn right
+				FASTESTPATH_TURN_RIGHT_90();
+				horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+				vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+			  }
+
+
+			  // use below if need to move in front of obstacle
+			  // targetDist = 20;
+					// RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+					// osDelay(10);
+
+
+			  // Step 5: If obstacle is not in front, Turn right 90 Degree.
+				  FASTESTPATH_TURN_RIGHT_90();
+			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+
+			  // Step 6: Move Straight across obstacle distance to cross over
+			  targetDist = horizontal_dist_bef_turn * 2;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+
+			  // Step 7: Turn Right 90 Degrees
+			  FASTESTPATH_TURN_RIGHT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
+
+			  // Step 8: Move Straight until in line with first obstacle
+			  targetDist = vertical_distance_to_second_obs - 50;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
+
+
+			  // Step 9: Turn Right 90 Degrees
+			  FASTESTPATH_TURN_RIGHT_90();
+			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
+
+			  // Step 10: Move forward until before turn radius to center
+			  targetDist = horizontal_dist_bef_turn - HORIZONTAL_TURN_RADIUS;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
+
+			  // Step 11: Turn Left 90 Degrees to face the parking spot
+			  FASTESTPATH_TURN_LEFT_90();
+			  // horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS; -- need to care about horizontal dist?
+			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
+
+			  // Step 12: Move until 5 cm before parking spot using UltraSonic sensor
+			  targetDist = 5;
+			  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+
+
+			  __ON_TASK_END(&htim8, prevTask, curTask);
+
+			  if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
+				  __CLEAR_CURCMD(curCmd);
+				  __ACK_TASK_DONE(&huart3, rxMsg);
+			  } else __READ_COMMAND(cQueue, curCmd, rxMsg);
+		  }
+	  }
+  /* USER CODE END runFPSecondObsTurnLeftTask */
+}
+
+/* USER CODE BEGIN Header_runFPSecondObsTurnRightTask */
+/**
+* @brief Function implementing the FPScndObsTurnR thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_runFPSecondObsTurnRightTask */
+void runFPSecondObsTurnRightTask(void *argument)
+{
+  /* USER CODE BEGIN runFPSecondObsTurnRightTask */
+  /* Infinite loop */
+
+	// CREATE THESE GLOBAL VARIABLES
+	// const float HORIZONTAL_TURN_RADIUS
+	// const float VERTICAL_TURN_RADIUS
+	// float horizontal_dist_bef_turn = 0;
+	// float vertical_distance_to_second_obs = 0; //supposed to use as global variable
+
+	// THINGS TO CHECK
+	// CHECK IF NEED TO USE BL30 OR OTHER BL FORMS
+
+	  osDelay(300); //give a short while for US to update value
+	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
+
+	  for(;;)
+	  {
+		  if (curTask != TASK_FP_YR) osDelay(1000);
+		  else
+		  {
+			  /*
+			  Steps to execute when robot in front of SECOND obstacle
+			  Step 1: turn right 90 degree
+			  Step 2: Move straight for 30 cm
+			  Step 3: Turn left 90 Degree. Check using Ultrasonic sensor
+			  if the obstacle is still in front
+			  Step 4: If obstacle is still in front, come BACK LEFT +++++ MOVE STRAIGHT FOR EXTRA 20CM
+			  and repeat Step 3.
+			  Step 5: If obstacle is not in front, Turn left 90 Degree.
+			  Step 6: Move Straight across obstacle distance to cross over
+			  Step 7: Turn Left 90 Degrees
+			  Step 8: Move Straight until in line with first obstacle
+			  Step 9: Turn Left 90 Degrees
+			  Step 10: Move forward until before turn radius to center
+			  Step 11: Turn Right 90 Degrees to face the parking spot
+			  Step 12: Move until 5 cm before parking spot using UltraSonic sensor
+			  */
+
+			  //  Step 1: turn right 90 degree
+			  FASTESTPATH_TURN_RIGHT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+
+			  // Step 2: Move straight for 30 cm
+			  targetDist = 30;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  horizontal_dist_bef_turn += 30;
+
+			  // Step 3: Turn left 90 Degree. Check using Ultrasonic sensor
+			  // if the obstacle is still in front
+			  FASTESTPATH_TURN_LEFT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+			  osDelay(300); //give a short while for US to update value
+
+
+			  // Step 4: If obstacle is still in front, come BACK LEFT +++++ MOVE STRAIGHT FOR EXTRA 20CM
+			  // and repeat Step 3.
+			  while(obsDist_US <= dist_second_obs)
+			  {
+				// 4.1 Move back left
+				__SET_CMD_CONFIG(cfgs[CONFIG_BL30], &htim8, &htim1, targetAngle);
+					  RobotTurn(&targetAngle);
+				vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
+				horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+					  osDelay(10);
+
+				// 4.2 Go in front 20 cm
+				targetDist = 20;
+					  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+				 horizontal_dist_bef_turn += 20;
+					  osDelay(10);
+
+				// 4.3 Turn left
+				FASTESTPATH_TURN_LEFT_90();
+				horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+				vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+			  }
+
+
+			  // use below if need to move in front of obstacle
+			  // targetDist = 20;
+					// RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+					// osDelay(10);
+
+
+			  // Step 5: If obstacle is not in front, Turn left 90 Degree.
+			  FASTESTPATH_TURN_LEFT_90();
+			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+
+			  // Step 6: Move Straight across obstacle distance to cross over
+			  targetDist = horizontal_dist_bef_turn * 2;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+
+			  // Step 7: Turn Left 90 Degrees
+			  FASTESTPATH_TURN_LEFT_90();
+			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
+
+			  // Step 8: Move Straight until in line with first obstacle
+			  targetDist = vertical_distance_to_second_obs - 50;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
+
+
+			  // Step 9: Turn Left 90 Degrees
+			  FASTESTPATH_TURN_LEFT_90();
+			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
+
+			  // Step 10: Move forward until before turn radius to center
+			  targetDist = horizontal_dist_bef_turn - HORIZONTAL_TURN_RADIUS;
+			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
+
+			  // Step 11: Turn Right 90 Degrees to face the parking spot
+			  FASTESTPATH_TURN_RIGHT_90();
+			  // horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS; -- need to care about horizontal dist?
+			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
+
+			  // Step 12: Move until 5 cm before parking spot using UltraSonic sensor
+			  targetDist = 5;
+			  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+
+
+			  __ON_TASK_END(&htim8, prevTask, curTask);
+
+			  if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
+					__CLEAR_CURCMD(curCmd);
+					__ACK_TASK_DONE(&huart3, rxMsg);
+			  } else __READ_COMMAND(cQueue, curCmd, rxMsg);
+		  }
+	  }
+
+  /* USER CODE END runFPSecondObsTurnRightTask */
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
@@ -2391,4 +2890,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
