@@ -201,6 +201,9 @@ Command curCmd;
 uint8_t rxMsg[16];
 char ch[16];
 char US_dist[16];
+char vert_dist[16];
+char horiz_dist[16];
+
 
 uint8_t manualMode = 0;
 
@@ -1630,12 +1633,17 @@ void runOledTask(void *argument)
 
 	int angleTemp = angleNow / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 	snprintf(ch, sizeof(ch), "angle:%-4d", (int) angleTemp);
-	OLED_ShowString(0, 0, (char *) ch);
+	OLED_ShowString(0, 0, (char *) ch); 
 
 	if (curTask == TASK_FASTESTPATH)
 	{
 		snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
 		OLED_ShowString(0, 20, (char *) US_dist);
+		snprintf(vert_dist, sizeof(vert_dist), "dist2: %3.4lf", (float) vertical_distance_to_second_obs);
+		OLED_ShowString(30, 20, (char *) US_dist);
+		snprintf(horiz_dist, sizeof(horiz_dist), "dist2: %3.4lf", (float) horizontal_dist_bef_turn);
+		OLED_ShowString(60, 20, (char *) US_dist);
+
 	}
 //	OLED_ShowString(0, 0, (char *) ch);
 //	OLED_ShowString(0, 12, (char *) rxMsg);
@@ -2501,12 +2509,17 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		  // this step if the turning radius is large
 		  targetDist = horizontal_dist_bef_turn - HORIZONTAL_TURN_RADIUS;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+		  horizontal_dist_bef_turn -= targetDist;
 		  osDelay(10);
+
+
+		/////// NEED TO CHECK IF HORIZONTAL_DISP - DIST TRAVELLED IS is small for a small margin of error
+		////// CAN IMPLEMENT WITH A WHILE LOOP AND KEEP CHECKING
 
 		  // Step 4: Turn left 90 degrees to face the second obstacle in its center
 		  FASTESTPATH_TURN_LEFT_90();
-		  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-		  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+		  vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+		  horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
 		  osDelay(10);
 
 		  // Step 5: Move in front until the car is 50 cm away from the second obstacle
@@ -2575,8 +2588,8 @@ void runFPFirstObsTurnRightTask(void *argument)
 
 			// Step 4: Turn left 90 degrees to face the second obstacle in its center
 			FASTESTPATH_TURN_RIGHT_90();
-			vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-			horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+		  	vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+		 	horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
 			osDelay(10);
 
 			// Step 5: Move in front until the car is 50 cm away from the second obstacle
@@ -2660,8 +2673,8 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  // Step 3: Turn right 90 Degree. Check using Ultrasonic sensor
 			  // if the obstacle is still in front
 			  FASTESTPATH_TURN_RIGHT_90();
-			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+			  horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
 			  osDelay(300); //give a short while for US to update value
 
 
@@ -2671,24 +2684,24 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  {
 				// 4.1 Move back right
 				__SET_CMD_CONFIG(cfgs[CONFIG_BR30], &htim8, &htim1, targetAngle);
-					  RobotTurn(&targetAngle);
-					  osDelay(10);
+				RobotTurn(&targetAngle);
+				osDelay(10);
 
 				// determine what's the horizontal dist subtracted when moving BACK RIGHT
 				// will set it to 10 for now
-				vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
-				horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+				vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
+				horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
 
 				// 4.2 Go in front 20 cm
 				targetDist = 20;
-					  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-				 horizontal_dist_bef_turn += 20;
-					  osDelay(10);
+			        RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+				horizontal_dist_bef_turn += 20;
+			        osDelay(10);
 
 				// 4.3 Turn right
 				FASTESTPATH_TURN_RIGHT_90();
-				horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-				vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+				horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
+				vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
 				osDelay(10);
 			  }
 
@@ -2709,11 +2722,13 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  targetDist = horizontal_dist_bef_turn * 2;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			  osDelay(10);
+			  //// HORIZONTAL DISP NOT UPDATED AS WE'RE ASSUMING WE ARE TRAVELLING ACCURATELY AND THAT
+		          //// THE DISPLACEMENT WILL BE THE SAME
 
 			  // Step 7: Turn Right 90 Degrees
 			  FASTESTPATH_TURN_RIGHT_90();
-			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS;
+			  horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
+			  vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
 			  osDelay(10);
 
 			  // Step 8: Move Straight until in line with first obstacle
@@ -2730,7 +2745,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
 
 			  // Step 10: Move forward until before turn radius to center
-			  targetDist = horizontal_dist_bef_turn - HORIZONTAL_TURN_RADIUS;
+			  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			  osDelay(10);
 			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
