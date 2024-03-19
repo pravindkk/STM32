@@ -87,13 +87,6 @@ const osThreadAttr_t moveDistTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for fastestPathTask */
-osThreadId_t fastestPathTaskHandle;
-const osThreadAttr_t fastestPathTask_attributes = {
-  .name = "fastestPathTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* Definitions for buzzerTask */
 osThreadId_t buzzerTaskHandle;
 const osThreadAttr_t buzzerTask_attributes = {
@@ -126,13 +119,6 @@ const osThreadAttr_t BLTask_attributes = {
 osThreadId_t BRTaskHandle;
 const osThreadAttr_t BRTask_attributes = {
   .name = "BRTask",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for fastestPathV2 */
-osThreadId_t fastestPathV2Handle;
-const osThreadAttr_t fastestPathV2_attributes = {
-  .name = "fastestPathV2",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -356,13 +342,11 @@ void runOledTask(void *argument);
 void runCmdTask(void *argument);
 void runADCTask(void *argument);
 void runMoveDistTask(void *argument);
-void runFastestPathTask(void *argument);
 void runBuzzerTask(void *argument);
 void runFLTask(void *argument);
 void runFRTask(void *argument);
 void runBLTask(void *argument);
 void runBRTask(void *argument);
-void runFastestPathTask_V2(void *argument);
 void runBatteryTask(void *argument);
 void runMoveDistObsTask(void *argument);
 void runFPFirstObsTurnLeftTask(void *argument);
@@ -544,9 +528,6 @@ int main(void)
   /* creation of moveDistTask */
   moveDistTaskHandle = osThreadNew(runMoveDistTask, NULL, &moveDistTask_attributes);
 
-  /* creation of fastestPathTask */
-  fastestPathTaskHandle = osThreadNew(runFastestPathTask, NULL, &fastestPathTask_attributes);
-
   /* creation of buzzerTask */
   buzzerTaskHandle = osThreadNew(runBuzzerTask, NULL, &buzzerTask_attributes);
 
@@ -561,9 +542,6 @@ int main(void)
 
   /* creation of BRTask */
   BRTaskHandle = osThreadNew(runBRTask, NULL, &BRTask_attributes);
-
-  /* creation of fastestPathV2 */
-  fastestPathV2Handle = osThreadNew(runFastestPathTask_V2, NULL, &fastestPathV2_attributes);
 
   /* creation of batteryTask */
   batteryTaskHandle = osThreadNew(runBatteryTask, NULL, &batteryTask_attributes);
@@ -1481,7 +1459,7 @@ void RobotTurnFastest(float * targetAngle) {
 
 void FASTESTPATH_TURN(CmdConfig cfg){
     __SET_CMD_CONFIG(cfg, &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
     
     //    targetDist = 4;
@@ -1491,7 +1469,7 @@ void FASTESTPATH_TURN(CmdConfig cfg){
 void FASTESTPATH_TURN_LEFT_90() {
     
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_FL90], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
 //    targetDist = 4;
 //    RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
@@ -1506,9 +1484,9 @@ void FASTESTPATH_TURN_LEFT_90() {
 void FASTESTPATH_TURN_RIGHT_90() {
 
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_FR90], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
-    targetDist = 4;
+//    targetDist = 4;
 //    RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 //    osDelay(10);
     
@@ -1523,7 +1501,7 @@ void FASTESTPATH_TURN_RIGHT_90() {
 void FASTESTPATH_TURN_BACK_LEFT_90() {
 
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_BL90], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
     targetDist = 4;
     RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
@@ -1540,7 +1518,7 @@ void FASTESTPATH_TURN_BACK_LEFT_90() {
 void FASTESTPATH_TURN_BACK_RIGHT_90() {
 
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_BR90], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
     targetDist = 4;
     RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
@@ -1557,7 +1535,7 @@ void FASTESTPATH_TURN_BACK_RIGHT_90() {
 void FASTESTPATH_TURN_RIGHT_180() {
     
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_FR180], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
     targetDist = 4;
 //    RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
@@ -1573,7 +1551,7 @@ void FASTESTPATH_TURN_RIGHT_180() {
 
 void FASTESTPATH_TURN_LEFT_180() {
     __SET_CMD_CONFIG(cfgs[CONFIG_FP_FL180], &htim8, &htim1, targetAngle);
-    RobotTurn(&targetAngle);
+    RobotTurnFastest(&targetAngle);
     osDelay(10);
     targetDist = 4;
 //    RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
@@ -1585,94 +1563,6 @@ void FASTESTPATH_TURN_LEFT_180() {
 //    __SET_MOTOR_DIRECTION(1);
 //    __SET_MOTOR_DUTY(&htim8, 1000, 2000);
 //    RobotTurn(&targetAngle);
-}
-
-void FASTESTPATH_TURN_LEFT_90X(uint8_t * turnSize) { // x3
-	__SET_MOTOR_DIRECTION(1);
-	switch (*turnSize) {
-	case 1:
-	case 3:
-		targetAngle = 83;
-		__SET_SERVO_TURN(&htim1, 50);
-		__SET_MOTOR_DUTY(&htim8, 2000, 3500);
-		break;
-	case 2:
-	case 4:
-	default:
-//		targetAngle = 85;
-		targetAngle = 83;
-		__SET_SERVO_TURN(&htim1, 52);
-//		__SET_MOTOR_DUTY(&htim8, 2500, 2916);
-		__SET_MOTOR_DUTY(&htim8, 3000, 3500);
-		break;
-	}
-	RobotTurnFastest(&targetAngle);
-
-}
-
-void FASTESTPATH_TURN_LEFT_90X_RETURN(uint8_t * turnSize) {
-	__SET_MOTOR_DIRECTION(1);
-		switch (*turnSize) {
-		case 1:
-			targetAngle = 83;
-			__SET_SERVO_TURN(&htim1, 50);
-			__SET_MOTOR_DUTY(&htim8, 2000, 3500);
-			break;
-		case 3:
-			targetAngle = 85;
-			__SET_SERVO_TURN(&htim1, 50);
-			__SET_MOTOR_DUTY(&htim8, 2000, 3500);
-			break;
-		case 2:
-		case 4:
-		default:
-	//		targetAngle = 85;
-			targetAngle = 79;
-			__SET_SERVO_TURN(&htim1, 52);
-	//		__SET_MOTOR_DUTY(&htim8, 2500, 2916);
-			__SET_MOTOR_DUTY(&htim8, 3000, 3500);
-			break;
-		}
-		RobotTurnFastest(&targetAngle);
-}
-
-//void FASTESTPATH_TURN_RIGHT_90X(const uint8_t MODE) { //x4
-//	__SET_MOTOR_DIRECTION(1);
-//	switch (MODE) {
-//	case 1:
-//		break;
-//	case 2:
-//		break;
-//	case 3:
-//	default:
-//		targetAngle = -85.5;
-//		__SET_SERVO_TURN(&htim1, 98);
-//		__SET_MOTOR_DUTY(&htim8, 2700, 2500);
-//		break;
-//	}
-//	RobotTurnFastest(&targetAngle);
-//}
-
-void FASTESTPATH_TURN_RIGHT_180X(uint8_t * turnSize) {
-	__SET_MOTOR_DIRECTION(1);
-	switch (*turnSize) {
-	case 1:
-	case 3:
-		targetAngle = -172;
-		__SET_SERVO_TURN(&htim1, 115);
-		__SET_MOTOR_DUTY(&htim8, 3500, 2000);
-		break;
-	case 2:
-	case 4:
-	default:
-//		targetAngle = -176;
-		targetAngle = -170;
-		__SET_SERVO_TURN(&htim1, 98);
-//		__SET_MOTOR_DUTY(&htim8, 2700, 2500);
-		__SET_MOTOR_DUTY(&htim8, 3500, 3240);
-		break;
-	}
-	RobotTurnFastest(&targetAngle);
 }
 
 void RobotMoveUntilIROvershoot() {
@@ -1735,31 +1625,6 @@ void runOledTask(void *argument)
 		OLED_ShowString(0, 70, (char *) horiz_dist);
 
 	}
-//	OLED_ShowString(0, 0, (char *) ch);
-//	OLED_ShowString(0, 12, (char *) rxMsg);
-//	OLED_ShowString(0, 24, (char *) aRxBuffer);
-//	snprintf(US_dist, sizeof(US_dist), "dist: %3.2lf", (float) obsDist_US);
-//	OLED_ShowString(0, 20, (char *) US_dist);
-//	HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
-//	do {
-//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
-//	  __delay_us(&htim4, 10); // wait for 10us
-//	  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
-////	  HAL_TIM_Base_Start_IT(&htim4);
-//	  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
-//	  osDelay(10); // give timer interrupt chance to update obsDist_US value
-
-//	  OLED_Refresh_Gram();
-//	} while (1);
-//	snprintf(ch, sizeof(ch), "l:%-3d|r:%-3d", (int)angle_left, (int)angle_right);
-//	snprintf(ch, sizeof(ch), "ir:%-5d", (int)obsDist_IR);
-//	OLED_ShowString(0, 12, (char *) ch);
-//	snprintf(ch, sizeof(ch), "angle:%-7d", (int)angleNow);
-//	OLED_ShowString(0, 24, (char *) ch);
-//	snprintf(ch, sizeof(ch), "obs_a:%-4d|x:%-4d", (int)obs_a, (int) x);
-//	OLED_ShowString(0, 24, (char *) ch);
-//	snprintf(ch, sizeof(ch), "US:%-4d|IR:%-4d", (int)obsDist_US, (int)obsDist_IR);
-//	OLED_ShowString(0, 48, (char *) ch);
 	OLED_Refresh_Gram();
 
 	osDelay(250);
@@ -1995,126 +1860,6 @@ void runMoveDistTask(void *argument)
 	  }
   }
   /* USER CODE END runMoveDistTask */
-}
-
-/* USER CODE BEGIN Header_runFastestPathTask */
-/**
-* @brief Function implementing the fastestPathTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_runFastestPathTask */
-void runFastestPathTask(void *argument)
-{
-  /* USER CODE BEGIN runFastestPathTask */
-	uint8_t hadOvershoot = 0;
-  /* Infinite loop */
-  for(;;)
-  {
-	  if (curTask != TASK_FASTESTPATH) osDelay(1000);
-	  else {
-		  if (step == 0) {
-			  targetDist = 30;
-			  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-		  } else if (step == 1) {
-			  //2:  turn left by 90 degree, record down angle when US sensor overshoot
-			  hadOvershoot = 0;
-			  angleNow = 0; gyroZ = 0;
-			  angle_left = 0;
-			  targetAngle = 90;
-			  obsDist_US = 0;
-			  __SET_SERVO_TURN_MAX(&htim1, 0);
-			  __SET_MOTOR_DUTY(&htim8, 600, 1000);
-			  __SET_MOTOR_DIRECTION(1);
-			  HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
-			  last_curTask_tick = HAL_GetTick();
-			  do {
-				  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ);
-				  if (!hadOvershoot) {
-					  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
-					  __delay_us(&htim4, 10); // wait for 10us
-					  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
-					  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
-					  osDelay(5); // give timer interrupt chance to update obsDist_US value
-				  }
-
-
-				  if (HAL_GetTick() - last_curTask_tick >=10) {
-//					  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ);
-					  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-					  if (obsDist_US > 55 && !hadOvershoot) {
-						  angle_left = angleNow;
-						  hadOvershoot = 1;
-					  }
-
-					  if (abs(targetAngle - angleNow) < 0.01) break;
-					  last_curTask_tick = HAL_GetTick();
-				  }
-
-				} while (1);
-			  __SET_MOTOR_DUTY(&htim8, 0, 0);
-			  __RESET_SERVO_TURN(&htim1);
-			  osDelay(10);
-
-			  obs_a = 30 * tanf(angle_left * PI / 180);
-			  angle_right = atanf((60 - obs_a) / 30) * 180 / PI;
-			  x = sqrtf((60 - obs_a) * (60 - obs_a) + 900) - 23; // 23 robot length offset
-
-		  } else if (step == 2) {
-			  // 3: move forward until IR overshoot
-			  RobotMoveUntilIROvershoot();
-			  osDelay(10);
-		  }else if (step == 3) {
-			  // 4: Turn right by 180 degree
-			  FASTESTPATH_TURN_RIGHT_180();
-			  osDelay(10);
-		  } else if (step == 4){
-			  // 5: move forward until right beside obstacle
-			  RobotMoveUntilIRHit();
-			  osDelay(10);
-		  }else if (step == 5) {
-			  // 6: move forward until IR overshoot
-			  RobotMoveUntilIROvershoot();
-			  osDelay(10);
-		  }else if (step == 6) {
-			  // 7: Turn right by 90 degree
-			  FASTESTPATH_TURN_RIGHT_90();
-			  osDelay(10);
-		  }else if (step == 7) {
-			  // 8: move forward until IR overshoot
-			  RobotMoveUntilIROvershoot();
-			  osDelay(10);
-		  }else if (step == 8) {
-			  // 9: turn right by angle_right
-			  __SET_SERVO_TURN_MAX(&htim1, 1);
-			  __SET_MOTOR_DUTY(&htim8, 2000, 1000);
-			  targetAngle = angle_right *-1;
-			  RobotTurn(&targetAngle);
-		  }else if (step == 9) {
-			  //10: move until center of the original path
-			  targetDist = x;
-			  RobotMoveDist(&targetDist, 1, SPEED_MODE_T);
-		  }else if (step == 10) {
-			  //11: turn left to face the carpark
-			  __SET_SERVO_TURN_MAX(&htim1, 0);
-			  __SET_MOTOR_DUTY(&htim8, 1000, 2000);
-			  targetAngle = angle_right;
-			  RobotTurn(&targetAngle);
-		  } else if (step == 11) {
-			  //12: back to the carpark
-			  targetDist = 15;
-			  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-		  }
-
-		  clickOnce = 0;
-		  prevTask = curTask;
-		  curTask = TASK_NONE;
-		  __CLEAR_CURCMD(curCmd);
-		  __ACK_TASK_DONE(&huart3, rxMsg);
-
-	  }
-  }
-  /* USER CODE END runFastestPathTask */
 }
 
 /* USER CODE BEGIN Header_runBuzzerTask */
@@ -2407,98 +2152,6 @@ void runBRTask(void *argument)
   /* USER CODE END runBRTask */
 }
 
-/* USER CODE BEGIN Header_runFastestPathTask_V2 */
-/**
-* @brief Function implementing the fastestPathV2 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_runFastestPathTask_V2 */
-void runFastestPathTask_V2(void *argument)
-{
-  /* USER CODE BEGIN runFastestPathTask_V2 */
-	const float FL_Offset_Y = 1.5;
-	uint8_t turnSize = 2;
-	uint8_t speedModeFP = SPEED_MODE_2;
-  /* Infinite loop */
-  for(;;)
-  {
-	  if (curTask != TASK_FASTESTPATH_V2) osDelay(1000);
-	  else {
-		  turnSize = curCmd.val;
-		  speedModeFP = (turnSize == 1 || turnSize == 2) ? SPEED_MODE_2 : SPEED_MODE_1;
-//		  if (turnSize == 3 || turnSize == 4) speedModeFP = SPEED_MODE_1;
-//		   STEP 1: move forward until x cm behind the obstacle
-//		  if (step == 0) {
-			 targetDist = 70;
-			 RobotMoveDist(&targetDist, DIR_FORWARD, speedModeFP);
-		  switch (turnSize) {
-		  case 1:
-		  case 3:
-			  targetDist = 20 + 7 + FL_Offset_Y;
-			  break;
-		  case 2:
-		  case 4:
-			  targetDist = 40 + 7 + FL_Offset_Y;
-			  break;
-		  default:
-			  break;
-		  }
-
-			  RobotMoveDistObstacle(&targetDist, speedModeFP);
-//		  } else if (step == 1) {
-			  // STEP 2: turn left
-			  FASTESTPATH_TURN_LEFT_90X(&turnSize);
-//		  } else if (step == 2) {
-			  // STEP 3: turn right 180
-			  FASTESTPATH_TURN_RIGHT_180X(&turnSize);
-//		  } else if (step == 3) {
-			  // STEP 4: move right by 94cm
-			  switch (turnSize) {
-			  case 1:
-			  case 3:
-				  targetDist = 52;
-				  break;
-			  case 2:
-			  case 4:
-				  targetDist = 70;
-//				  targetDist = 60;
-				  break;
-			  default:
-				  break;
-			  }
-			  RobotMoveDist(&targetDist, DIR_FORWARD, speedModeFP);
-//		  } else if (step == 4) {
-			  // STEP 5: turn right 180
-			  FASTESTPATH_TURN_RIGHT_180X(&turnSize);
-//		  } else if (step == 5) {
-			  // STEP 6: turn left (back to initial path)
-//			  FASTESTPATH_TURN_LEFT_90X(&turnSize);
-			  FASTESTPATH_TURN_LEFT_90X_RETURN(&turnSize);
-//		  } else if (step == 6) {
-			  // STEP 7: move back to carpack
-			  targetDist = 60;
-			  RobotMoveDist(&targetDist, DIR_FORWARD, speedModeFP);
-//			  targetDist = ;
-			  RobotMoveDistObstacle(&targetDist, speedModeFP);
-//		  }
-
-//		  step = (step + 1) % 7;
-
-			// DONE.
-			prevTask = curTask;
-			curTask = TASK_NONE;
-//			__ACK_TASK_DONE(&huart3, rxMsg);
-			snprintf((char *)rxMsg, sizeof(rxMsg) - 1, "done!"); \
-			HAL_UART_Transmit(&huart3, (uint8_t *) "ACK|X\r\n", 7, 0xFFFF); \
-			__CLEAR_CURCMD(curCmd);
-			clickOnce = 0;
-	  }
-    osDelay(1);
-  }
-  /* USER CODE END runFastestPathTask_V2 */
-}
-
 /* USER CODE BEGIN Header_runBatteryTask */
 /**
 * @brief Function implementing the batteryTask thread.
@@ -2656,7 +2309,7 @@ void runFPFirstObsTurnLeftTask(void *argument)
 /* USER CODE END Header_runFPFirstObsTurnRightTask */
 void runFPFirstObsTurnRightTask(void *argument)
 {
-	/* USER CODE BEGIN runFPFirstObsTurnRightTask */
+  /* USER CODE BEGIN runFPFirstObsTurnRightTask */
 	/* Infinite loop */
 	for(;;)
 	{
@@ -2715,7 +2368,7 @@ void runFPFirstObsTurnRightTask(void *argument)
 			} else __READ_COMMAND(cQueue, curCmd, rxMsg);
 		}
 	}
-	/* USER CODE END runFPFirstObsTurnRightTask */
+  /* USER CODE END runFPFirstObsTurnRightTask */
 }
 
 /* USER CODE BEGIN Header_runFPSecondObsTurnLeftTask */
