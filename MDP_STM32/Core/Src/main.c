@@ -291,8 +291,6 @@ enum TASK_TYPE{
 	TASK_BR,
 	TASK_ADC,
 	TASK_MOVE_OBS,
-	TASK_FASTESTPATH,
-	TASK_FASTESTPATH_V2,
 	TASK_BUZZER,
 	TASK_FP_XL,
 	TASK_FP_XR,
@@ -323,6 +321,7 @@ float obs_a, x, angle_left, angle_right;
 
 // fastest path variables --my version
 float horizontal_dist_bef_turn, vertical_distance_to_second_obs;
+int RPI_ACK_COUNT = 0;
 
 /* USER CODE END PV */
 
@@ -1697,14 +1696,6 @@ void runCmdTask(void *argument)
 	  		 curTask = TASK_BUZZER;
 	  		__PEND_CURCMD(curCmd);
 	  		break;
-	  	 case 16:
-	  		 curTask = TASK_FASTESTPATH;
-	  		__PEND_CURCMD(curCmd);
-	  		 break;
-	  	 case 17:
-	  		 curTask = TASK_FASTESTPATH_V2;
-	  		__PEND_CURCMD(curCmd);
-	  		 break;
 	  	 case 18:
 	  		 curTask = TASK_FP_XL;
 	  		__PEND_CURCMD(curCmd);
@@ -1720,20 +1711,6 @@ void runCmdTask(void *argument)
 	  	 case 21:
 	  		 curTask = TASK_FP_YR;
 	  		__PEND_CURCMD(curCmd);
-	  		 break;
-	  	 case 88: // Axxx, rotate left by xxx degree
-	  	 case 89: // Cxxx, rotate right by xxx degree
-	  		 __SET_SERVO_TURN_MAX(&htim1, curCmd.index - 88);
-	  		 __SET_MOTOR_DIRECTION(DIR_FORWARD);
-	  		 if (curCmd.index == 88) {
-	  			 targetAngle = curCmd.val;
-	  			 __SET_MOTOR_DUTY(&htim8, 800, 1200);
-	  		 } else {
-	  			targetAngle = -curCmd.val;
-	  			 __SET_MOTOR_DUTY(&htim8, 1200, 800);
-	  		 }
-	  		__PEND_CURCMD(curCmd);
-	  		 RobotTurn(&targetAngle);
 	  		 break;
 	  	 case 99:
 	  		 break;
@@ -2195,6 +2172,8 @@ void runMoveDistObsTask(void *argument)
 		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
 		  osDelay(300);
 		  vertical_distance_to_second_obs -= obsDist_US;
+		  RPI_ACK_COUNT++;
+
 		  
 
 		  __ON_TASK_END(&htim8, prevTask, curTask);
@@ -2202,7 +2181,18 @@ void runMoveDistObsTask(void *argument)
 
 		if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
 			__CLEAR_CURCMD(curCmd);
-			__ACK_TASK_DONE(&huart3, rxMsg);
+			switch(RPI_ACK_COUNT)
+			{
+			case 1:
+				HAL_UART_Transmit(_UART, (uint8_t *) "ACK1|\r\n", 7, 0xFFFF); \
+				break;
+			case 2:
+				HAL_UART_Transmit(_UART, (uint8_t *) "ACK2|\r\n", 7, 0xFFFF); \
+				break;
+			default:
+				break;
+			}
+//			__ACK_TASK_DONE(&huart3, rxMsg);
 		} else __READ_COMMAND(cQueue, curCmd, rxMsg);
 	  }
   }
