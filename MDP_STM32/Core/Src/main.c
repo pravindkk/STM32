@@ -2184,10 +2184,10 @@ void runMoveDistObsTask(void *argument)
 			switch(RPI_ACK_COUNT)
 			{
 			case 1:
-				HAL_UART_Transmit(_UART, (uint8_t *) "ACK1|\r\n", 7, 0xFFFF); \
+				HAL_UART_Transmit(&huart3, (uint8_t *) "ACK1|\r\n", 7, 0xFFFF); \
 				break;
 			case 2:
-				HAL_UART_Transmit(_UART, (uint8_t *) "ACK2|\r\n", 7, 0xFFFF); \
+				HAL_UART_Transmit(&huart3, (uint8_t *) "ACK2|\r\n", 7, 0xFFFF); \
 				break;
 			default:
 				break;
