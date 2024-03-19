@@ -249,7 +249,7 @@ typedef struct _commandConfig {
 
 
 // Radius
-CmdConfig cfgs[19] = {
+CmdConfig cfgs[25] = {
 	{0,0,SERVO_CENTER,0, DIR_FORWARD}, // STOP
 	{1200, 1200, SERVO_CENTER, 0, DIR_FORWARD}, // FW00
 	{1200, 1200, SERVO_CENTER, 0, DIR_BACKWARD}, // BW00
