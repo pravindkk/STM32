@@ -64,7 +64,7 @@ osThreadId_t oledTaskHandle;
 const osThreadAttr_t oledTask_attributes = {
   .name = "oledTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for commandTask */
 osThreadId_t commandTaskHandle;
@@ -1438,12 +1438,12 @@ void RobotTurn(float * targetAngle) {
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
 		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
-//		  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
-//		  OLED_ShowString(0, 0, (char *) ch);
+		  angleNow += gyroZ * GRYO_SENSITIVITY_SCALE_FACTOR_500DPS * 0.01;  //
+		  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
+		  OLED_ShowString(0, 0, (char *) ch);
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
 		  last_curTask_tick = HAL_GetTick();
-//		  OLED_Refresh_Gram();
+		  OLED_Refresh_Gram();
 	  }
 	} while(1);
 
@@ -1739,7 +1739,7 @@ void RobotMoveUntilIRHit() {
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_Task */
+/* USER CODE BEGIN Header_runOledTask */
 /**
   * @brief  Function implementing the oledTask thread.
   * @param  argument: Not used
@@ -2530,7 +2530,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 	  // CHECK IF NEED TO USE BR30 OR OTHER BL FORMS for the Backward right movement
 
 
-	  osDelay(300); //give a short while for US to update value
+	  osDelay(500); //give a short while for US to update value
 	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
 
 	  for(;;)
@@ -2599,7 +2599,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 				FASTESTPATH_TURN_RIGHT_90();
 				horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
 				vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-				osDelay(10);
+				osDelay(300);
 			  }
 
 
