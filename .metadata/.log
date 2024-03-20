@@ -4057,6 +4057,7 @@ java.vendor=AdoptOpenJDK
 BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_SG
 Command-line arguments:  -os win32 -ws win32 -arch x86_64
 
+<<<<<<< Updated upstream
 !ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-03-14 17:22:04.711
 !MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
 
@@ -5008,18 +5009,18 @@ Command-line arguments:  -os win32 -ws win32 -arch x86_64
 
 !ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-03-15 08:34:51.472
 !MESSAGE Started RMI Server, listening on port 41337
-!SESSION 2024-03-19 20:36:16.386 -----------------------------------------------
-eclipse.buildId=Version 1.8.0
-java.version=11.0.11
+!SESSION 2024-03-20 16:37:00.456 -----------------------------------------------
+eclipse.buildId=Version 1.7.0
+java.version=11.0.10
 java.vendor=AdoptOpenJDK
 BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_SG
 Command-line arguments:  -os win32 -ws win32 -arch x86_64
 
-!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-03-19 20:36:27.857
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-03-20 16:37:08.559
 !MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
 
-!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-03-19 20:36:27.936
-!MESSAGE Log4j initialized with config file C:\Users\Pravind\Desktop\sch\STM32_workspace\.metadata\.log4j.xml
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-03-20 16:37:08.662
+!MESSAGE Log4j initialized with config file C:\Users\gweej\School\STM32\.metadata\.log4j.xml
 
-!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-03-19 20:36:44.534
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-03-20 16:37:16.211
 !MESSAGE Started RMI Server, listening on port 41337
