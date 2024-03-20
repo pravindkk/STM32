@@ -198,6 +198,7 @@ float targetAngle = 0;
 float angleNow = 0;
 uint8_t readGyroZData[2];
 int16_t gyroZ;
+int16_t previousGyroZ;
 uint16_t newDutyL, newDutyR;
 uint32_t last_curTask_tick = 0;
 
@@ -216,6 +217,7 @@ typedef struct _pidConfig {
 } PIDConfig;
 
 PIDConfig pidSlow, pidTSlow, pidFast;
+PIDConfig pidServo;
 
 typedef struct _commandConfig {
 	uint16_t leftDuty;
@@ -269,12 +271,12 @@ CmdConfig cfgs[25] = {
 	{500, 1800, 30, -87.2, DIR_BACKWARD}, // BL20
 	{1800, 300, 115, 91.5, DIR_BACKWARD}, // BR20,
 
-	{1500, 1500, 30, 87.5, DIR_FORWARD}, // FL30
+	{300, 4500, 30, 89.8, DIR_FORWARD}, // FL30
 	{1500, 1500, 108, -86.5, DIR_FORWARD}, // FR30
 	{1500, 1500, 30, -87.5, DIR_BACKWARD}, // BL30
 	{1500, 1100, 115, 88, DIR_BACKWARD}, // BR30
     
-    {1500, 1500, 30, 87.5, DIR_FORWARD}, // FP_FL_90
+    {1500, 1500, 30, 85.5, DIR_FORWARD}, // FP_FL_90
     {3000, 800, 115, -86, DIR_FORWARD}, // FP_FR_90
     {1500, 1500, 30, -87.5, DIR_BACKWARD}, // FP_BL_90
     {1500, 1100, 115, 88, DIR_BACKWARD}, // FP_BR_90
@@ -476,6 +478,8 @@ int main(void)
   PIDConfigInit(&pidTSlow, 2.5, 0.0,0.8);
   PIDConfigInit(&pidSlow, 3.8, 0.0,0);
   PIDConfigInit(&pidFast, 1.5, 0.0,0);
+  PIDConfigInit(&pidServo, 3.8, 0.0,0);
+
 //  PIDConfigInit(&pidFast, 0.75, 0.0,0);
 
   	HAL_UART_Receive_IT(&huart3, aRxBuffer,RX_BUFFER_SIZE);
@@ -1297,7 +1301,7 @@ int correction = 0;
 //PIDConfig curPIDConfig;
 
 void StraightLineMove(const uint8_t speedMode) {
-	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ); // polling
+	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ); // polling
 	dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? 1 : -1; // use only one of the wheel to determine car direction
 	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 
@@ -1309,7 +1313,7 @@ void StraightLineMove(const uint8_t speedMode) {
 }
 
 void StraightLineMoveSpeedScale(const uint8_t speedMode, float * speedScale) {
-	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ); // polling
+	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ); // polling
 	dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2) ? 1 : -1; // use only one of the wheel to determine car direction
 	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ * 0.05); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 	if (speedMode == SPEED_MODE_1) __PID_SPEED_1(pidSlow, angleNow, correction, dir, newDutyL, newDutyR);
@@ -1428,15 +1432,155 @@ void RobotMoveDistObstacle_IR(float * targetDist) {
 
 void RobotTurn(float * targetAngle) {
 	angleNow = 0; gyroZ = 0;
+	previousGyroZ = 0;
+	float angle_overshot = 0;
 	last_curTask_tick = HAL_GetTick();
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ);
-		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
+//		  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
+//		  OLED_ShowString(0, 0, (char *) ch);
+		  if (abs(angleNow - *targetAngle) < 0.01) break;
+		  last_curTask_tick = HAL_GetTick();
+//		  OLED_Refresh_Gram();
+	  }
+	} while(1);
+
+	__SET_MOTOR_DUTY(&htim8, 0, 0);
+	__RESET_SERVO_TURN(&htim1);
+}
+
+void RobotTurn_V2(float * targetAngle) {
+	angleNow = 0; gyroZ = 0;
+	previousGyroZ = 0;
+	float angle_overshot = 0;
+	int servo_offset = 0;
+	int new_servo_value = 0;
+	last_curTask_tick = HAL_GetTick();
+	do {
+	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
+		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
 		  last_curTask_tick = HAL_GetTick();
 	  }
 	} while(1);
+	angle_overshot = angleNow - *targetAngle;
+	servo_offset = (angle_overshot / (*targetAngle)) * SERVO_CENTER;
+//	if (angle_overshot < 0.01)
+//	{
+//
+//		new_servo_value = SERVO_RIGHT_MAX - servo_offset;
+//		__SET_SERVO_TURN(&htim1, new_servo_value);
+//		__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+//
+//	}
+//	else if (angle_overshot > 0.01)
+//	{
+//		new_servo_value = SERVO_LEFT_MAX + servo_offset;
+//		__SET_SERVO_TURN(&htim1, new_servo_value);
+//		__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+//	}
+//
+//	last_curTask_tick = HAL_GetTick();
+//	while(HAL_GetTick() - last_curTask_tick <= 1000){
+//		__SET_MOTOR_DUTY(&htim8, 800, 800);
+//	}
+	osDelay(1);
+	if (*targetAngle > 0) {
+		if (angleNow > *targetAngle) {
+			new_servo_value = SERVO_LEFT_MAX + servo_offset;
+			__SET_SERVO_TURN(&htim1, new_servo_value);
+			__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+			last_curTask_tick = HAL_GetTick();
+			do {
+			  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
+				  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+				  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
+				  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
+				  if (angleNow - *targetAngle < -2) break;
+				  last_curTask_tick = HAL_GetTick();
+			  }
+			} while(1);
+		} else if (angleNow < *targetAngle) {
+			new_servo_value = SERVO_LEFT_MAX + servo_offset;
+			__SET_SERVO_TURN(&htim1, new_servo_value);
+			__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+			last_curTask_tick = HAL_GetTick();
+			do {
+			  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
+				  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+				  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
+				  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
+				  if (angleNow - *targetAngle > 2) break;
+				  last_curTask_tick = HAL_GetTick();
+			  }
+			} while(1);
+		}
+	} else if (*targetAngle < 0) {
+		if (angleNow > *targetAngle) {
+			new_servo_value = SERVO_LEFT_MAX + servo_offset;
+			__SET_SERVO_TURN(&htim1, new_servo_value);
+			__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+			last_curTask_tick = HAL_GetTick();
+				do {
+				  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
+					  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+					  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
+					  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
+					  if (angleNow - *targetAngle < -2) break;
+					  last_curTask_tick = HAL_GetTick();
+				  }
+				} while(1);
+		} else if (angleNow < *targetAngle) {
+			new_servo_value = SERVO_LEFT_MAX + servo_offset;
+			__SET_SERVO_TURN(&htim1, new_servo_value);
+			__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+			last_curTask_tick = HAL_GetTick();
+				do {
+				  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
+					  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+					  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
+					  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
+					  if (angleNow - *targetAngle > 2) break;
+					  last_curTask_tick = HAL_GetTick();
+				  }
+				} while(1);
+		}
+	}
+//	if (angle_overshot > 0.01)
+//	{
+//
+//		new_servo_value = SERVO_LEFT_MAX + servo_offset;
+//		__SET_SERVO_TURN(&htim1, new_servo_value);
+//		__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+//
+//	}
+//	else if (angle_overshot < -0.01)
+//	{
+//		new_servo_value = SERVO_RIGHT_MAX - servo_offset;
+//		__SET_SERVO_TURN(&htim1, new_servo_value);
+//		__SET_MOTOR_DIRECTION(DIR_BACKWARD);
+//	}
+
+//	last_curTask_tick = HAL_GetTick();
+//	do {
+//	  if (HAL_GetTick() - last_curTask_tick >= 20) { // sample gyro every 10ms
+//		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ);
+//		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
+//		  __SET_MOTOR_DUTY(&htim8, 800, 800);
+//		  if (angleNow - angle_overshot < 0.01) break;
+//		  last_curTask_tick = HAL_GetTick();
+//	  }
+//	} while(1);
+
+
+
+//	if (angle_overshot > 0.01)
+//	{
+//
+//	}
 	__SET_MOTOR_DUTY(&htim8, 0, 0);
 	__RESET_SERVO_TURN(&htim1);
 }
@@ -1446,7 +1590,7 @@ void RobotTurnFastest(float * targetAngle) {
 	last_curTask_tick = HAL_GetTick();
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ);
+		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
 		  last_curTask_tick = HAL_GetTick();
@@ -1595,7 +1739,7 @@ void RobotMoveUntilIRHit() {
 }
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_runOledTask */
+/* USER CODE BEGIN Header_Task */
 /**
   * @brief  Function implementing the oledTask thread.
   * @param  argument: Not used
@@ -1606,24 +1750,27 @@ void runOledTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
+
   for(;;)
   {
-//	snprintf(ch, sizeof(ch), "%-3d%%", (int)batteryVal);
-
+//	sprintf(ch, sizeof(ch), "%-3d%%", (int)batteryVal);
 	int angleTemp = angleNow / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-	snprintf(ch, sizeof(ch), "angle:%-4d", (int) angleTemp);
-	OLED_ShowString(0, 0, (char *) ch); 
+	snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
+	OLED_ShowString(0, 0, (char *) ch);
 
-	if (curTask == TASK_FP_XL || curTask == TASK_FP_XR)
-	{
-		snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
-		OLED_ShowString(0, 20, (char *) US_dist);
-		snprintf(vert_dist, sizeof(vert_dist), "dist2: %3.4lf", (float) vertical_distance_to_second_obs);
-		OLED_ShowString(0, 50, (char *) vert_dist);
-		snprintf(horiz_dist, sizeof(horiz_dist), "dist2: %3.4lf", (float) horizontal_dist_bef_turn);
-		OLED_ShowString(0, 70, (char *) horiz_dist);
 
-	}
+
+
+//	if (curTask == TASK_FP_XL || curTask == TASK_FP_XR)
+//	{
+//		snprintf(US_dist, sizeof(US_dist), "dist2: %3.2lf", (float) obsDist_US);
+//		OLED_ShowString(0, 20, (char *) US_dist);
+//		snprintf(vert_dist, sizeof(vert_dist), "dist2: %3.4lf", (float) vertical_distance_to_second_obs);
+//		OLED_ShowString(0, 50, (char *) vert_dist);
+//		snprintf(horiz_dist, sizeof(horiz_dist), "dist2: %3.4lf", (float) horizontal_dist_bef_turn);
+//		OLED_ShowString(0, 70, (char *) horiz_dist);
+//
+//	}
 	OLED_Refresh_Gram();
 
 	osDelay(250);
@@ -1894,7 +2041,8 @@ void runFLTask(void *argument)
 		  switch(curCmd.val) {
 		  case 30: // FL30 (4x2)
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL30], &htim8, &htim1, targetAngle);
-			  RobotTurn(&targetAngle);
+//			  RobotTurn(&targetAngle);
+			  RobotTurn_V2(&targetAngle);
 			  osDelay(10);
 			  targetDist = 4;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);

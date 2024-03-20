@@ -66,16 +66,18 @@ extern "C" {
 #define INIT_DUTY_SP1_R 2300
 #define DUTY_SP1_RANGE 700
 
-#define INIT_DUTY_SP2_L 3000
-#define INIT_DUTY_SP2_R 3000
-#define DUTY_SP2_RANGE 700
+#define INIT_DUTY_SP2_L 5000
+#define INIT_DUTY_SP2_R 5000
+#define DUTY_SP2_RANGE 1000
+
+#define DUTY_SERVO_CHANGE_RANGE 20
 
 #define DIR_FORWARD 1
 #define DIR_BACKWARD 0
 
-#define SERVO_LEFT_MAX 15
+#define SERVO_LEFT_MAX 29
 #define SERVO_CENTER 50
-#define SERVO_RIGHT_MAX 130
+#define SERVO_RIGHT_MAX 116
 
 #define IR_CONST_A 25644.81557
 #define IR_CONST_B 260.4233354
@@ -90,6 +92,8 @@ extern "C" {
 #define HORIZONTAL_TURN_RADIUS 40
 #define VERTICAL_180_RADIUS 60
 #define HORIZONTAL_180_RADIUS 3
+
+#define ALPHA 0.2f
 
 
 #define __GET_TARGETTICK(dist, targetTick) ({ \
@@ -134,9 +138,11 @@ extern "C" {
 	cfg.ekSum = 0; \
 })
 
-#define __Gyro_Read_Z(_I2C, readGyroData, gyroZ) ({ \
+#define __Gyro_Read_Z(_I2C, readGyroData, gyroZ, previousGyroZ) ({ \
 	HAL_I2C_Mem_Read(_I2C,ICM20948__I2C_SLAVE_ADDRESS_1 << 1, ICM20948__USER_BANK_0__GYRO_ZOUT_H__REGISTER, I2C_MEMADD_SIZE_8BIT, readGyroData, 2, 0xFFFF); \
 	gyroZ = readGyroData[0] << 8 | readGyroData[1]; \
+	gyroZ = ALPHA * (gyroZ) + (1 - ALPHA) * previousGyroZ; \
+	previousGyroZ = gyroZ; \
 })
 
 #define __ADC_Read_Dist(_ADC, dataPoint, IR_data_raw_acc, obsDist, obsTick) ({ \
@@ -177,6 +183,14 @@ extern "C" {
 	newDutyL = INIT_DUTY_SP2_L + correction*dir; \
 	newDutyR = INIT_DUTY_SP2_R - correction*dir; \
 })
+
+//#define __PID_SERVO_(_TIMER, cfg, error, correction) ({ \
+//	correction = (cfg).Kp * error + (cfg).Ki * (cfg).ekSum + (cfg).Kd * ((cfg).ek1 - error);\
+//	(cfg).ek1 = error; \
+//	(cfg).ekSum += error; \
+//	correction = correction > DUTY_SERVO_CHANGE_RANGE ? DUTY_SERVO_CHANGE_RANGE : (correction < -DUTY_SERVO_CHANGE_RANGE ? -DUTY_SERVO_CHANGE_RANGE : correction); \
+//	__SET_SERVO_TURN(_TIMER, error-correction); \
+//})
 
 /*
 #define __PID_Speed(cfg, actual, target, newDutyL, newDutyR) ({ \
