@@ -268,10 +268,10 @@ CmdConfig cfgs[25] = {
 	{800, 1200, 30, 0, DIR_BACKWARD}, // BL--
 	{1200, 800, 115, 0, DIR_BACKWARD}, // BR--
 
-	{700, 2000, 30, 89.5, DIR_FORWARD}, // FL00
-	{2000, 300, 115 ,-87.7, DIR_FORWARD}, // FR00
-	{600, 2000, 30, -87, DIR_BACKWARD}, // BL00
-	{2000, 300, 115, 90.5, DIR_BACKWARD}, // BR00,
+	{700, 2000, 30, 90.6, DIR_FORWARD}, // FL00
+	{2000, 300, 115 ,-88.5, DIR_FORWARD}, // FR00
+	{600, 2000, 30, -88.9, DIR_BACKWARD}, // BL00
+	{2000, 300, 115, 91.3, DIR_BACKWARD}, // BR00,
 
 	{850, 1800, 30, 88.2, DIR_FORWARD}, // FL20
 	{1800, 300, 115 ,-87.7, DIR_FORWARD}, // FR20
@@ -283,12 +283,12 @@ CmdConfig cfgs[25] = {
 	{1500, 1500, 30, -87, DIR_BACKWARD}, // BL30
 	{1500, 1100, 115, 88, DIR_BACKWARD}, // BR30
     
-    {800, 3000, 30, 85.5, DIR_FORWARD}, // FP_FL_90
-    {3000, 800, 115, -86, DIR_FORWARD}, // FP_FR_90
+    {500, 3200, 24, 85.5, DIR_FORWARD}, // FP_FL_90
+    {3200, 500, 120, -86, DIR_FORWARD}, // FP_FR_90
     {2500, 2500, 30, -87.5, DIR_BACKWARD}, // FP_BL_90
     {2500, 2100, 115, 88, DIR_BACKWARD}, // FP_BR_90
-    {2500, 2500, 30, 177.5, DIR_FORWARD}, // FP_FL_180
-    {2500, 2100, 115, -176, DIR_FORWARD}, // FP_FR_180
+    {500, 3200, 30, 177.5, DIR_FORWARD}, // FP_FL_180
+    {3200, 500, 115, -176, DIR_FORWARD}, // FP_FR_180
 };
 
 enum TASK_TYPE{
@@ -1457,8 +1457,8 @@ void RobotTurn(float * targetAngle, CmdConfig cfgs) {
 			  float newLeftDuty = (float)(cfgs).leftDuty;
 			  float newRightDuty = (float)(cfgs).rightDuty;
 			  // Multiply by 0.5
-			  newLeftDuty *= 0.5f;
-			  newRightDuty *= 0.5f;
+			  newLeftDuty *= 0.7f;
+			  newRightDuty *= 0.7f;
 			  __SET_MOTOR_DUTY(&htim8, newLeftDuty, newRightDuty);
 		  }
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
@@ -1689,6 +1689,18 @@ void RobotTurnFastest(float * targetAngle) {
 	__RESET_SERVO_TURN_FAST(&htim1);
 }
 
+void RobotTurnFastestPartial(float * targetAngle) {
+	angleNow = 0; gyroZ = 0;
+	uint32_t startTick = HAL_GetTick();
+	last_curTask_tick = HAL_GetTick();
+	do {
+	  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+	  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+	  if (abs(angleNow - *targetAngle) < 0.01) break;
+	  last_curTask_tick = HAL_GetTick();
+	} while(HAL_GetTick() - last_curTask_tick <= 30);
+}
+
 void FASTESTPATH_TURN(CmdConfig cfg){
     __SET_CMD_CONFIG(cfg, &htim8, &htim1, targetAngle);
     RobotTurnFastest(&targetAngle);
@@ -1795,6 +1807,32 @@ void FASTESTPATH_TURN_LEFT_180() {
 //    __SET_MOTOR_DIRECTION(1);
 //    __SET_MOTOR_DUTY(&htim8, 1000, 2000);
 //    RobotTurn(&targetAngle);
+}
+
+void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
+	uint32_t last_tick = 0;
+	int left_turn_servo = 30 , right_turn_servo = 85;
+	float left_turn_angle = 30, right_turn_angle = -30;
+
+
+	float middle_servo_angle = 0;
+	__SET_SERVO_TURN(&htim1, right_turn_servo);
+	__SET_MOTOR_DIRECTION(DIR_FORWARD);
+	__SET_MOTOR_DUTY(&htim8, 1500, 1500);
+
+	RobotTurnFastestPartial(&right_turn_angle);
+
+
+	__SET_SERVO_TURN(&htim1, left_turn_servo);
+
+	RobotTurnFastestPartial(&left_turn_angle);
+
+
+
+	__RESET_SERVO_TURN(&htim1);
+
+	RobotTurnFastestPartial(&middle_servo_angle);
+
 }
 
 void RobotMoveUntilIROvershoot() {
@@ -2190,7 +2228,7 @@ void runFLTask(void *argument)
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle, cfgs[CONFIG_FL00]);
 			  osDelay(10);
-			  targetDist = 10;
+			  targetDist = 3.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2248,7 +2286,7 @@ void runFRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  default: // FR00 (indoor 3x1) CALIBRATED
-			  targetDist = 6.4;
+			  targetDist = 7.6;
 			  //targetDist = 3.5 no battery
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
@@ -2375,13 +2413,13 @@ void runBRTask(void *argument)
 			  break;
 		  default: // BR00 (indoor 3x1)
 			  //targetDist = 7;
-			  targetDist = 12.2;
+			  targetDist = 12.5;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle, cfgs[CONFIG_BR00]);
 			  osDelay(10);
-			  targetDist = 5;
+			  targetDist = 6.2;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2527,11 +2565,11 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		  // Step 3: Move in front a bit. Can calibrate later. Or can also remove
 		  // this step if the turning radius is large
 		  // 8cm offset to adjust for the large turn of the car
-		  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
-//		  targetDist = 5;
-		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-		  horizontal_dist_bef_turn -= targetDist;
-		  osDelay(10);
+//		  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
+////		  targetDist = 5;
+//		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+//		  horizontal_dist_bef_turn -= targetDist;
+//		  osDelay(10);
 
 
 		/////// NEED TO CHECK IF HORIZONTAL_DISP - DIST TRAVELLED IS is small for a small margin of error
@@ -2587,33 +2625,33 @@ void runFPFirstObsTurnRightTask(void *argument)
 			Step 4: Turn right 90 degrees to face the second obstacle in its center
 			Step 5: Move in front until the car is 50 cm away from the second obstacle
 			*/
-
-			// Step 1: Turn right 90 degree
-			FASTESTPATH_TURN_RIGHT_90();
-            vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-            horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-			osDelay(10);
-
-			// Step 2: Do a 180 degree turn to left
-			FASTESTPATH_TURN_LEFT_180();
-            vertical_distance_to_second_obs += VERTICAL_180_RADIUS;
-            horizontal_dist_bef_turn -= HORIZONTAL_180_RADIUS;
-			osDelay(10);
-			
-			
-			// Step 3: Move in front a bit. Can calibrate later. Or can also remove
-			// this step if the turning radius is large
-			// 8cm offset to adjust for the large turn of the car
-			targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
-			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-            horizontal_dist_bef_turn -= targetDist;
-			osDelay(10);
-
-			// Step 4: Turn left 90 degrees to face the second obstacle in its center
-			FASTESTPATH_TURN_RIGHT_90();
-            vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-            horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
-			osDelay(10);
+			FASTESTPATH_PARTIAL_TURN_FIRST_OBS();
+//			// Step 1: Turn right 90 degree
+//			FASTESTPATH_TURN_RIGHT_90();
+//            vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+//            horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+//			osDelay(10);
+//
+//			// Step 2: Do a 180 degree turn to left
+//			FASTESTPATH_TURN_LEFT_180();
+//            vertical_distance_to_second_obs += VERTICAL_180_RADIUS;
+//            horizontal_dist_bef_turn -= HORIZONTAL_180_RADIUS;
+//			osDelay(10);
+//
+//
+//			// Step 3: Move in front a bit. Can calibrate later. Or can also remove
+//			// this step if the turning radius is large
+//			// 8cm offset to adjust for the large turn of the car
+////			targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
+////			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+////            horizontal_dist_bef_turn -= targetDist;
+////			osDelay(10);
+//
+//			// Step 4: Turn left 90 degrees to face the second obstacle in its center
+//			FASTESTPATH_TURN_RIGHT_90();
+//            vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+//            horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
+//			osDelay(10);
 
 			// Step 5: Move in front until the car is 50 cm away from the second obstacle
 			osDelay(300);
