@@ -1803,29 +1803,30 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     // config values
     int left_turn_servo = 30;
     int right_turn_servo = 85;
-    float left_turn_angle = 30;
-    float right_turn_angle = -30;
-    float middle_servo_angle = 0;
     
     // gyro measurements
     uint32_t last_tick = 0;
     uint32_t task_start_tick = 0;
     angleNow = 0; gyroZ = 0;
     
+    // dc motor measurements
+    int left_duty = 2500;
+    int right_duty = 2500;
+
 //    //US measurements
 //    obsDist_US = 1000;
 //    HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
     
     
     __SET_MOTOR_DIRECTION(DIR_FORWARD);
-    __SET_MOTOR_DUTY(&htim8, 1500, 1500);
+    __SET_MOTOR_DUTY(&htim8, left_duty, right_duty);
     
     // step 1. turn right for 300ms
     __SET_SERVO_TURN(&htim1, right_turn_servo);
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 1200){
+    while(HAL_GetTick() - task_start_tick <= 500){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -1838,7 +1839,7 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 2000){
+    while(HAL_GetTick() - task_start_tick <= 1600){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -1846,18 +1847,56 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
         }
     }
     
-    //step 3. centralise for 300ms
-    __RESET_SERVO_TURN(&htim1);
+    //step 3. turn right for 300ms
+//    task_start_tick = HAL_GetTick();
+//    last_tick = HAL_GetTick();
+//    __SET_MOTOR_DUTY(&htim8, 800, 800);
+//
+//    while(angleNow < 0.01){
+//        if(HAL_GetTick() - task_start_tick >= 500){
+//        	right_turn_servo -= 5;
+//        }
+//    	__SET_SERVO_TURN(&htim1, right_turn_servo);
+//        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+//          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+//          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+//          last_tick = HAL_GetTick();
+//        }
+//    }
+    left_duty = 3000;
+    right_duty = 800;
+    __SET_MOTOR_DUTY(&htim8, left_duty, right_duty);
+    __SET_SERVO_TURN(&htim1, right_turn_servo);
     task_start_tick = HAL_GetTick();
-    
+
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 1200){
+    while(HAL_GetTick() - task_start_tick <= 500){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
           last_tick = HAL_GetTick();
         }
+        if (angleNow < 20){
+        	__SET_MOTOR_DUTY(&htim8, 0.7*left_duty, 0.7*right_duty);
+        }
     }
+
+    __RESET_SERVO_TURN(&htim1);
+    __SET_MOTOR_DUTY(&htim8, 0, 0);
+
+
+//    __SET_SERVO_TURN(&htim1, left_turn_servo);
+//    task_start_tick = HAL_GetTick();
+//
+//    last_tick = HAL_GetTick();
+//    while(HAL_GetTick() - task_start_tick <= 1200){
+//        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+//          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+//          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+//          last_tick = HAL_GetTick();
+//        }
+//    }
+
 
 
 }
