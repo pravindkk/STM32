@@ -1838,7 +1838,7 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 1200){
+    while(HAL_GetTick() - task_start_tick <= 2000){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
