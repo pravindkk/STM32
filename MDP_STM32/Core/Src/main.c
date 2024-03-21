@@ -283,12 +283,12 @@ CmdConfig cfgs[25] = {
 	{1500, 1500, 30, -87, DIR_BACKWARD}, // BL30
 	{1500, 1100, 115, 88, DIR_BACKWARD}, // BR30
     
-    {1500, 1500, 30, 85.5, DIR_FORWARD}, // FP_FL_90
+    {800, 3000, 30, 85.5, DIR_FORWARD}, // FP_FL_90
     {3000, 800, 115, -86, DIR_FORWARD}, // FP_FR_90
-    {1500, 1500, 30, -87.5, DIR_BACKWARD}, // FP_BL_90
-    {1500, 1100, 115, 88, DIR_BACKWARD}, // FP_BR_90
-    {1500, 1500, 30, 177.5, DIR_FORWARD}, // FP_FL_180
-    {1500, 1100, 115, -176, DIR_FORWARD}, // FP_FR_180
+    {2500, 2500, 30, -87.5, DIR_BACKWARD}, // FP_BL_90
+    {2500, 2100, 115, 88, DIR_BACKWARD}, // FP_BR_90
+    {2500, 2500, 30, 177.5, DIR_FORWARD}, // FP_FL_180
+    {2500, 2100, 115, -176, DIR_FORWARD}, // FP_FR_180
 };
 
 enum TASK_TYPE{
@@ -2526,7 +2526,8 @@ void runFPFirstObsTurnLeftTask(void *argument)
 
 		  // Step 3: Move in front a bit. Can calibrate later. Or can also remove
 		  // this step if the turning radius is large
-		  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS;
+		  // 8cm offset to adjust for the large turn of the car
+		  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
 //		  targetDist = 5;
 		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 		  horizontal_dist_bef_turn -= targetDist;
@@ -2602,7 +2603,8 @@ void runFPFirstObsTurnRightTask(void *argument)
 			
 			// Step 3: Move in front a bit. Can calibrate later. Or can also remove
 			// this step if the turning radius is large
-            targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS;
+			// 8cm offset to adjust for the large turn of the car
+			targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
 			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
             horizontal_dist_bef_turn -= targetDist;
 			osDelay(10);
