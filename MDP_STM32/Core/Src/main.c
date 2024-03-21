@@ -1691,14 +1691,15 @@ void RobotTurnFastest(float * targetAngle) {
 
 void RobotTurnFastestPartial(float * targetAngle) {
 	angleNow = 0; gyroZ = 0;
-	uint32_t startTick = HAL_GetTick();
 	last_curTask_tick = HAL_GetTick();
 	do {
-	  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-	  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-	  if (abs(angleNow - *targetAngle) < 0.01) break;
-	  last_curTask_tick = HAL_GetTick();
-	} while(HAL_GetTick() - last_curTask_tick <= 30);
+		if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
+		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		  if (abs(angleNow - *targetAngle) < 0.01) break;
+		  last_curTask_tick = HAL_GetTick();
+		}
+	} while(1);
 }
 
 void FASTESTPATH_TURN(CmdConfig cfg){
@@ -1864,6 +1865,23 @@ void RobotMoveUntilIRHit() {
 	  } while (1);
 	  __SET_MOTOR_DUTY(&htim8, 0, 0);
 }
+
+
+void GetGyroV
+angleNow = 0; gyroZ = 0;
+previousGyroZ = 0;
+float angle_overshot = 0;
+int servo_offset = 0;
+int new_servo_value = 0;
+last_curTask_tick = HAL_GetTick();
+do {
+  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
+	  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+	  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
+	  if (abs(angleNow - *targetAngle) < 0.01) break;
+	  last_curTask_tick = HAL_GetTick();
+  }
+} while(1);
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_runOledTask */
