@@ -269,9 +269,9 @@ CmdConfig cfgs[25] = {
 	{1200, 800, 115, 0, DIR_BACKWARD}, // BR--
 
 	{700, 2000, 30, 90.6, DIR_FORWARD}, // FL00
-	{2000, 300, 115 ,-88.5, DIR_FORWARD}, // FR00
-	{600, 2000, 30, -88.9, DIR_BACKWARD}, // BL00
-	{2000, 300, 115, 91.3, DIR_BACKWARD}, // BR00,
+	{2000, 300, 115 ,-87.8, DIR_FORWARD}, // FR00
+	{600, 2000, 30, -88.6, DIR_BACKWARD}, // BL00
+	{2500, 300, 115, 89.7, DIR_BACKWARD}, // BR00,
 
 	{850, 1800, 30, 88.2, DIR_FORWARD}, // FL20
 	{1800, 300, 115 ,-87.7, DIR_FORWARD}, // FR20
@@ -1825,7 +1825,7 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 300){
+    while(HAL_GetTick() - task_start_tick <= 1200){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -1838,7 +1838,7 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 300){
+    while(HAL_GetTick() - task_start_tick <= 1200){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -1847,11 +1847,11 @@ void FASTESTPATH_PARTIAL_TURN_FIRST_OBS(){
     }
     
     //step 3. centralise for 300ms
-    __SET_SERVO_TURN(&htim1, left_turn_servo);
+    __RESET_SERVO_TURN(&htim1);
     task_start_tick = HAL_GetTick();
     
     last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 300){
+    while(HAL_GetTick() - task_start_tick <= 1200){
         if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
           __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
           angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -1906,21 +1906,6 @@ void RobotMoveUntilIRHit() {
 }
 
 
-void GetGyroV
-angleNow = 0; gyroZ = 0;
-previousGyroZ = 0;
-float angle_overshot = 0;
-int servo_offset = 0;
-int new_servo_value = 0;
-last_curTask_tick = HAL_GetTick();
-do {
-  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-	  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-	  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
-	  if (abs(angleNow - *targetAngle) < 0.01) break;
-	  last_curTask_tick = HAL_GetTick();
-  }
-} while(1);
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_runOledTask */
@@ -2279,13 +2264,13 @@ void runFLTask(void *argument)
 			  break;
 		  default: // FL00 (3x1) CALIBRATED
 //			  targetDist = 3;
-			  targetDist = 1;
+			  targetDist = 2.5;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle, cfgs[CONFIG_FL00]);
 			  osDelay(10);
-			  targetDist = 3.5;
+			  targetDist = 10;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2343,7 +2328,7 @@ void runFRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  default: // FR00 (indoor 3x1) CALIBRATED
-			  targetDist = 7.6;
+			  targetDist = 7.5;
 			  //targetDist = 3.5 no battery
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
@@ -2406,13 +2391,13 @@ void runBLTask(void *argument)
 			  osDelay(10);
 			  break;
 		  default: // BL00 (indoor 3x1)
-			  targetDist = 7;
+			  targetDist = 8.5;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BL00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle, cfgs[CONFIG_BL00]);
 			  osDelay(10);
-			  targetDist = 2.2;
+			  targetDist = 0;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2470,7 +2455,7 @@ void runBRTask(void *argument)
 			  break;
 		  default: // BR00 (indoor 3x1)
 			  //targetDist = 7;
-			  targetDist = 12.5;
+			  targetDist = 12.2;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR00], &htim8, &htim1, targetAngle);

@@ -75,9 +75,9 @@ extern "C" {
 #define DIR_FORWARD 1
 #define DIR_BACKWARD 0
 
-#define SERVO_LEFT_MAX 24
+#define SERVO_LEFT_MAX 29
 #define SERVO_CENTER 49
-#define SERVO_RIGHT_MAX 125
+#define SERVO_RIGHT_MAX 116
 
 #define IR_CONST_A 25644.81557
 #define IR_CONST_B 260.4233354
