@@ -70,7 +70,9 @@ extern "C" {
 #define INIT_DUTY_SP2_R 5000
 #define DUTY_SP2_RANGE 1000
 
-#define DUTY_SERVO_CHANGE_RANGE 20
+#define INIT_SERVO_VALUE 49
+#define DUTY_SERVO_LEFT_CHANGE_RANGE 15
+#define DUTY_SERVO_RIGHT_CHANGE_RANGE 30
 
 #define DIR_FORWARD 1
 #define DIR_BACKWARD 0
@@ -184,13 +186,14 @@ extern "C" {
 	newDutyR = INIT_DUTY_SP2_R - correction*dir; \
 })
 
-//#define __PID_SERVO_(_TIMER, cfg, error, correction) ({ \
-//	correction = (cfg).Kp * error + (cfg).Ki * (cfg).ekSum + (cfg).Kd * ((cfg).ek1 - error);\
-//	(cfg).ek1 = error; \
-//	(cfg).ekSum += error; \
-//	correction = correction > DUTY_SERVO_CHANGE_RANGE ? DUTY_SERVO_CHANGE_RANGE : (correction < -DUTY_SERVO_CHANGE_RANGE ? -DUTY_SERVO_CHANGE_RANGE : correction); \
-//	__SET_SERVO_TURN(_TIMER, error-correction); \
-//})
+#define __PID_SERVO(_TIMER, cfg, error, correction, new_servo_value) ({ \
+	correction = (cfg).Kp * error + (cfg).Ki * (cfg).ekSum + (cfg).Kd * ((cfg).ek1 - error);\
+	(cfg).ek1 = error; \
+	(cfg).ekSum += error; \
+	correction = correction > 0 ? (correction > DUTY_SERVO_LEFT_CHANGE_RANGE ? DUTY_SERVO_LEFT_CHANGE_RANGE : correction): (correction < DUTY_SERVO_RIGHT_CHANGE_RANGE ? DUTY_SERVO_RIGHT_CHANGE_RANGE : correction); \
+	new_servo_value = INIT_SERVO_VALUE + correction; \
+	__SET_SERVO_TURN(_TIMER, new_servo_value); \
+})
 
 /*
 #define __PID_Speed(cfg, actual, target, newDutyL, newDutyR) ({ \
@@ -294,10 +297,6 @@ void Error_Handler(void);
 #define OLED_SCL_GPIO_Port GPIOE
 #define OLED_SDA_Pin GPIO_PIN_6
 #define OLED_SDA_GPIO_Port GPIOE
-#define AIN2_Pin GPIO_PIN_2
-#define AIN2_GPIO_Port GPIOA
-#define AIN1_Pin GPIO_PIN_3
-#define AIN1_GPIO_Port GPIOA
 #define BIN1_Pin GPIO_PIN_4
 #define BIN1_GPIO_Port GPIOA
 #define BIN2_Pin GPIO_PIN_5
@@ -310,13 +309,17 @@ void Error_Handler(void);
 #define LED3_GPIO_Port GPIOE
 #define BUZZER_Pin GPIO_PIN_10
 #define BUZZER_GPIO_Port GPIOB
+#define DIN1_Pin GPIO_PIN_11
+#define DIN1_GPIO_Port GPIOB
+#define DIN2_Pin GPIO_PIN_15
+#define DIN2_GPIO_Port GPIOB
 #define SW1_Pin GPIO_PIN_8
 #define SW1_GPIO_Port GPIOD
 #define SW1_EXTI_IRQn EXTI9_5_IRQn
-#define PWMA_Pin GPIO_PIN_6
-#define PWMA_GPIO_Port GPIOC
 #define PWMB_Pin GPIO_PIN_7
 #define PWMB_GPIO_Port GPIOC
+#define PWMD_Pin GPIO_PIN_9
+#define PWMD_GPIO_Port GPIOC
 #define TRI_Pin GPIO_PIN_4
 #define TRI_GPIO_Port GPIOB
 
