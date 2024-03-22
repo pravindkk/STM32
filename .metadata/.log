@@ -5244,3 +5244,22 @@ Please check for update: Help > Check for Updates
 
 This file has been generated with STM32CubeMX version '6.10.0'.Your current STM32CubeMX version is '6.3.0'.
 Please check for update: Help > Check for Updates
+!SESSION 2024-03-22 16:54:57.242 -----------------------------------------------
+eclipse.buildId=Version 1.8.0
+java.version=11.0.11
+java.vendor=AdoptOpenJDK
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=en_SG
+Framework arguments:  C:\Users\Pravind\Desktop\sch\STM32_workspace\MDP_STM32\.project
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 C:\Users\Pravind\Desktop\sch\STM32_workspace\MDP_STM32\.project
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 4 4 2024-03-22 16:55:05.207
+!MESSAGE CubeMX plugin appears to be active, Log4j initialization might be too late.
+
+!ENTRY com.st.stm32cube.ide.mcu.informationcenter 1 1 2024-03-22 16:55:05.269
+!MESSAGE Log4j initialized with config file C:\Users\Pravind\Desktop\sch\STM32_workspace\.metadata\.log4j.xml
+
+!ENTRY com.st.stm32cube.ide.mcu.ide 1 1 2024-03-22 16:55:11.125
+!MESSAGE Started RMI Server, listening on port 41337
+
+!ENTRY org.eclipse.cdt.core 1 0 2024-03-22 16:55:14.763
+!MESSAGE Indexed 'MDP_STM32' (38 sources, 156 headers) in 3.49 sec: 16,913 declarations; 97,280 references; 2 unresolved inclusions; 152 syntax errors; 232 unresolved names (0.2%)

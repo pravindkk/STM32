@@ -108,8 +108,8 @@ extern "C" {
 })
 
 #define __SET_MOTOR_DIRECTION(DIR) ({ \
-	HAL_GPIO_WritePin(GPIOA, AIN2_Pin, ((DIR) ? GPIO_PIN_RESET : GPIO_PIN_SET)); \
-	HAL_GPIO_WritePin(GPIOA, AIN1_Pin, ((DIR) ? GPIO_PIN_SET: GPIO_PIN_RESET)); \
+	HAL_GPIO_WritePin(GPIOB, DIN2_Pin, ((DIR) ? GPIO_PIN_SET : GPIO_PIN_RESET)); \
+	HAL_GPIO_WritePin(GPIOB, DIN1_Pin, ((DIR) ? GPIO_PIN_RESET: GPIO_PIN_SET)); \
 	HAL_GPIO_WritePin(GPIOA, BIN2_Pin, ((DIR) ? GPIO_PIN_RESET: GPIO_PIN_SET)); \
 	HAL_GPIO_WritePin(GPIOA, BIN1_Pin, ((DIR) ? GPIO_PIN_SET: GPIO_PIN_RESET)); \
 })
@@ -215,7 +215,7 @@ extern "C" {
 })
 
 #define __SET_MOTOR_DUTY(_TIMER, DUTY_L, DUTY_R)({ \
-	(_TIMER)->Instance->CCR1 = DUTY_L; \
+	(_TIMER)->Instance->CCR4 = DUTY_L; \
 	(_TIMER)->Instance->CCR2 = DUTY_R; \
 })
 
