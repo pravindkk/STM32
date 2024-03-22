@@ -27,8 +27,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <inttypes.h>
 #include "../../PeripheralDrivers/Src/oled.c"
 #include "../../PeripheralDrivers/Src/ICM20948.c"
+
 
 /* USER CODE END Includes */
 
@@ -185,7 +187,7 @@ CommandQueue cQueue;
 
 Command curCmd;
 uint8_t rxMsg[16];
-char ch[16];
+char ch[25];
 char US_dist[16];
 char vert_dist[16];
 char horiz_dist[16];
@@ -329,7 +331,9 @@ float batteryVal;
 float obs_a, x, angle_left, angle_right;
 
 // fastest path variables --my version
-float horizontal_dist_bef_turn, vertical_distance_to_second_obs;
+float horizontal_dist_bef_turn = 0, vertical_distance_to_second_obs = 0;
+float first_obs_first_stop_dist = 0;
+float second_obs_dist = 0;
 int RPI_ACK_COUNT = 0;
 
 /* USER CODE END PV */
@@ -1798,130 +1802,6 @@ void FASTESTPATH_TURN_LEFT_180() {
 //    RobotTurn(&targetAngle);
 }
 
-void FASTESTPATH_FIRST_OBS_LEFT_TURN(){
-
-    // config values
-    int left_turn_servo = 30;
-    int right_turn_servo = 85;
-
-    // gyro measurements
-    uint32_t last_tick = 0;
-    uint32_t task_start_tick = 0;
-    angleNow = 0; gyroZ = 0;
-
-    __SET_MOTOR_DIRECTION(DIR_FORWARD);
-    __SET_MOTOR_DUTY(&htim8, 3000, 800);
-
-    // step 1. turn right for 300ms
-    __SET_SERVO_TURN(&htim1, right_turn_servo);
-    task_start_tick = HAL_GetTick();
-
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 300){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-    }
-
-    //step 2. turn left for 300ms
-	__SET_SERVO_TURN(&htim1, left_turn_servo);
-    task_start_tick = HAL_GetTick();
-
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 1200){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-    }
-
-    //step 3. turn right for 300ms
-    __SET_MOTOR_DUTY(&htim8, 3000, 800);
-    __SET_SERVO_TURN(&htim1, right_turn_servo);
-    task_start_tick = HAL_GetTick();
-
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 700){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-        if (angleNow < 20){
-        	__SET_MOTOR_DUTY(&htim8, (int) (0.7*3000), (int) (0.7*800));
-        }
-    }
-
-    __RESET_SERVO_TURN(&htim1);
-    __SET_MOTOR_DUTY(&htim8, 0, 0);
-
-}
-
-void FASTESTPATH_FIRST_OBS_RIGHT_TURN(){
-    
-    // config values
-    int left_turn_servo = 30;
-    int right_turn_servo = 85;
-    
-    // gyro measurements
-    uint32_t last_tick = 0;
-    uint32_t task_start_tick = 0;
-    angleNow = 0; gyroZ = 0;
-    
-    __SET_MOTOR_DIRECTION(DIR_FORWARD);
-    __SET_MOTOR_DUTY(&htim8, 3000, 800);
-    
-    // step 1. turn right for 300ms
-    __SET_SERVO_TURN(&htim1, right_turn_servo);
-    task_start_tick = HAL_GetTick();
-    
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 300){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-    }
-    
-    //step 2. turn left for 300ms
-	__SET_SERVO_TURN(&htim1, left_turn_servo);
-    task_start_tick = HAL_GetTick();
-    
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 1200){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-    }
-    
-    //step 3. turn right for 300ms
-    __SET_MOTOR_DUTY(&htim8, 3000, 800);
-    __SET_SERVO_TURN(&htim1, right_turn_servo);
-    task_start_tick = HAL_GetTick();
-
-    last_tick = HAL_GetTick();
-    while(HAL_GetTick() - task_start_tick <= 700){
-        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
-          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
-          last_tick = HAL_GetTick();
-        }
-        if (angleNow < 20){
-        	__SET_MOTOR_DUTY(&htim8, (int) (0.7*3000), (int) (0.7*800));
-        }
-    }
-
-    __RESET_SERVO_TURN(&htim1);
-    __SET_MOTOR_DUTY(&htim8, 0, 0);
-
-}
-
 void RobotMoveUntilIROvershoot() {
 	obsDist_IR = 0;
 	angleNow = 0; gyroZ = 0;
@@ -1966,20 +1846,37 @@ void runOledTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-	gyroZPrint=0;previousGyroZPrint=0;angleNowPrint=0;
-		last_curTask_tick = HAL_GetTick();
-		for (;;) {
-			if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint, previousGyroZPrint);
-				  angleNowPrint += gyroZPrint / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
-				  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNowPrint);
-				  OLED_ShowString(0, 0, (char *) ch);
-				  last_curTask_tick = HAL_GetTick();
+//	gyroZPrint=0;previousGyroZPrint=0;angleNowPrint=0;
+//		last_curTask_tick = HAL_GetTick();
+//		for (;;) {
+//			if (HAL_GetTick() - last_curTask_tick >= 20) { // sample gyro every 10ms
+//				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint, previousGyroZPrint);
+//				  angleNowPrint += gyroZPrint / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
+//				  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNowPrint);
+//				  OLED_ShowString(0, 0, (char *) ch);
+//				  snprintf(ch, sizeof(ch), "gyroZ: %" PRIu16, gyroZPrint);
+//				  OLED_ShowString(0, 30, (char *) ch);
+//				  last_curTask_tick = HAL_GetTick();
+//
+//			  }
+//			snprintf(ch, sizeof(ch), "US_dist: %.2lf" , obsDist_US);
+//			OLED_ShowString(0, 50, (char *) ch);
+//			OLED_Refresh_Gram();
+////			osDelay(250);
+//		}
+	for(;;){
+		snprintf(ch, sizeof(ch), "vert: %d", (int) vertical_distance_to_second_obs);
+	    OLED_ShowString(0, 0, (char *) ch);
 
-			  }
-			OLED_Refresh_Gram();
-//			osDelay(250);
-		}
+	    snprintf(ch, sizeof(ch), "horiz: %d", (int) horizontal_dist_bef_turn);
+	    OLED_ShowString(0, 30, (char *) ch);
+
+
+
+	    OLED_Refresh_Gram();
+	    osDelay(250);
+	}
+
 
 //  for(;;)
 //  {
@@ -2560,16 +2457,30 @@ void runMoveDistObsTask(void *argument)
 {
   /* USER CODE BEGIN runMoveDistObsTask */
   /* Infinite loop */
+  obsDist_US = 1000;
+  HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
+
+
   for(;;)
   {
 	  if (curTask != TASK_MOVE_OBS) osDelay(1000);
 	  else {
-		  osDelay(300);
-		  vertical_distance_to_second_obs += obsDist_US;
+
+		  // Step 1. Get US sensor reading
+		  last_curTask_tick = HAL_GetTick();
+		  while(HAL_GetTick() - last_curTask_tick <= 10){
+			  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
+			  __delay_us(&htim4, 10); // wait for 10us
+			  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
+			//	  HAL_TIM_Base_Start_IT(&htim4);
+			  __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
+		  }
+		  HAL_TIM_IC_Stop_IT(&htim4, TIM_CHANNEL_2);
+		  osDelay(10);
+		  first_obs_first_stop_dist += obsDist_US;
 		  targetDist = (float) curCmd.val;
 		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
 		  osDelay(300);
-		  vertical_distance_to_second_obs -= obsDist_US;
 		  RPI_ACK_COUNT++;
 
 		  
@@ -2608,75 +2519,117 @@ void runFPFirstObsTurnLeftTask(void *argument)
 {
   /* USER CODE BEGIN runFPFirstObsTurnLeftTask */
   /* Infinite loop */
+
+  // config values
+  int left_turn_servo = 30;
+  int right_turn_servo = 85;
+  float rear_dist_first_obs = 5;
+
+  // gyro measurements
+  uint32_t last_tick = 0;
+  uint32_t task_start_tick = 0;
+  angleNow = 0; gyroZ = 0;
+
+
+
   for(;;)
   {
 	  if (curTask != TASK_FP_XL) osDelay(1000);
-//	  else {
-//		  targetDist = (float) curCmd.val;
-//		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-//		  if (__COMMAND_QUEUE_IS_EMPTY(cQueue)) {
-//			  __CLEAR_CURCMD(curCmd);
-//			  __ACK_TASK_DONE(&huart3, rxMsg);
-//		  } else __READ_COMMAND(cQueue, curCmd, rxMsg);
-//	  }
 	  else
 	  {
 		  /*
-		  Steps to execute when robot in front of first obstacle
-		  Step 1: turn left 90 degree
-		  Step 2: Do a 180 degree turn to right
-		  Step 3: Move in front a bit. Can calibrate later. Or can also remove
-		  this step if the turning radius is large
-		  Step 4: Turn left 90 degrees to face the second obstacle in its center
-		  Step 5: Move in front until the car is 50 cm away from the second obstacle
+		  Steps to execute when robot in front of first obstacle:
+		  Step 1: turn left for 300ms
+		  Step 2: turn right for 1200ms
+		  Step 3: turn left again for 700ms to centralise the car
+		  Step 4: Move in front until the car is 50 cm away from the second obstacle
 		  */
 
-		  // Step 1: turn left 90 degree
-		  FASTESTPATH_TURN_LEFT_90();
-		  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-		  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-		  osDelay(10);
+		    __SET_MOTOR_DIRECTION(DIR_FORWARD);
 
-//		  __SET_CMD_CONFIG(cfgs[CONFIG_FL30], &htim8, &htim1, targetAngle);
-//		  RobotTurn(&targetAngle);
-//		  osDelay(10);
-//		  targetDist = 4;
-//		  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
-//                vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-//		  		  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
+		    // step 1. turn left for 300ms
+		    __SET_MOTOR_DUTY(&htim8, 800, 3000);
+		    __SET_SERVO_TURN(&htim1, left_turn_servo);
+		    task_start_tick = HAL_GetTick();
 
-		  // Step 2: Do a 180 degree turn to right
-		  FASTESTPATH_TURN_RIGHT_180();
-		  vertical_distance_to_second_obs += VERTICAL_180_RADIUS;
-		  horizontal_dist_bef_turn -= HORIZONTAL_180_RADIUS;
-		  osDelay(10);
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 900){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		    }
 
-		  // Step 3: Move in front a bit. Can calibrate later. Or can also remove
-		  // this step if the turning radius is large
-		  // 8cm offset to adjust for the large turn of the car
-//		  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
-////		  targetDist = 5;
-//		  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-//		  horizontal_dist_bef_turn -= targetDist;
-//		  osDelay(10);
+		    //step 2. turn right for 1200ms
+		    __SET_MOTOR_DUTY(&htim8, 3000, 800);
+			__SET_SERVO_TURN(&htim1, right_turn_servo);
+		    task_start_tick = HAL_GetTick();
+
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 1500){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		    }
+
+		    //step 3. turn left again for 700ms to centralise the car
+		    __SET_MOTOR_DUTY(&htim8, 800, 3000);
+		    __SET_SERVO_TURN(&htim1, left_turn_servo);
+		    task_start_tick = HAL_GetTick();
+
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 1600){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		        if (angleNow < 20){
+		        	__SET_MOTOR_DUTY(&htim8, (int) (0.6*800), (int) (0.6*3000));
+		        }
+		    }
+
+		    __SET_MOTOR_DUTY(&htim8, 0, 0);
+		    __RESET_SERVO_TURN(&htim1);
 
 
-		/////// NEED TO CHECK IF HORIZONTAL_DISP - DIST TRAVELLED IS is small for a small margin of error
-		////// CAN IMPLEMENT WITH A WHILE LOOP AND KEEP CHECKING
+		    /*
+		     step 4. If obs is within 20cm from car, move back 40cm.
+		     Else, move to 40 cm before obs.
+		     Also note down the distance from car to second obs after turn.
+		     */
 
-		  // Step 4: Turn left 90 degrees to face the second obstacle in its center
-          FASTESTPATH_TURN_LEFT_90();
-		  vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-		  horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
-		  osDelay(10);
+		    vertical_distance_to_second_obs += first_obs_first_stop_dist + rear_dist_first_obs;
 
-		  // Step 5: Move in front until the car is 50 cm away from the second obstacle
-		  osDelay(300);
-		  vertical_distance_to_second_obs += obsDist_US;
-		  targetDist = 50;
-		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-          osDelay(300);
-		  vertical_distance_to_second_obs -= obsDist_US;
+		    // shoot US sensor to determine second obstacle distance
+		    obsDist_US = 0;
+		    HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
+		    last_curTask_tick = HAL_GetTick();
+		    while(HAL_GetTick() - last_curTask_tick <= 10){
+		    	HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
+		    	__delay_us(&htim4, 10); // wait for 10us
+		    	HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
+		    	//	  HAL_TIM_Base_Start_IT(&htim4);
+		    	__HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
+		    }
+		    HAL_TIM_IC_Stop_IT(&htim4, TIM_CHANNEL_2);
+		    osDelay(10);
+		    second_obs_dist = obsDist_US;
+		    vertical_distance_to_second_obs += obsDist_US;
+
+		    // Move to within 50cm from second obstacle
+		    targetDist = 40;
+		    if(obsDist_US < 20){
+		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    	vertical_distance_to_second_obs -= 40 - obsDist_US;
+		    }else{
+		    	targetDist = 50;
+		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    }
+
 
 		  __ON_TASK_END(&htim8, prevTask, curTask);
 
@@ -2700,55 +2653,113 @@ void runFPFirstObsTurnRightTask(void *argument)
 {
   /* USER CODE BEGIN runFPFirstObsTurnRightTask */
 	/* Infinite loop */
+
+    // config values
+    int left_turn_servo = 30;
+    int right_turn_servo = 75;
+    float rear_dist_first_obs = 5;
+
+    // gyro measurements
+    uint32_t last_tick = 0;
+    uint32_t task_start_tick = 0;
+    angleNow = 0; gyroZ = 0;
+
 	for(;;)
 	{
 		if (curTask != TASK_FP_XR) osDelay(1000);
 		else
 		{
-			/*
-			Steps to execute when robot in front of first obstacle
-			Step 1: Turn right 90 degree
-			Step 2: Do a 180 degree turn to left
-			Step 3: Move in front a bit. Can calibrate later. Or can also remove
-			this step if the turning radius is large
-			Step 4: Turn right 90 degrees to face the second obstacle in its center
-			Step 5: Move in front until the car is 50 cm away from the second obstacle
+			  /*
+			Steps to execute when robot in front of first obstacle:
+			Step 1: turn right for 300ms
+			Step 2: turn left for 1200ms
+			Step 3: turn right again for 700ms to centralise the car
+			Step 4: Move in front until the car is 50 cm away from the second obstacle
 			*/
-			FASTESTPATH_FIRST_OBS_RIGHT_TURN();
-//			// Step 1: Turn right 90 degree
-//			FASTESTPATH_TURN_RIGHT_90();
-//            vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-//            horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-//			osDelay(10);
-//
-//			// Step 2: Do a 180 degree turn to left
-//			FASTESTPATH_TURN_LEFT_180();
-//            vertical_distance_to_second_obs += VERTICAL_180_RADIUS;
-//            horizontal_dist_bef_turn -= HORIZONTAL_180_RADIUS;
-//			osDelay(10);
-//
-//
-//			// Step 3: Move in front a bit. Can calibrate later. Or can also remove
-//			// this step if the turning radius is large
-//			// 8cm offset to adjust for the large turn of the car
-////			targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS - 8;
-////			RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-////            horizontal_dist_bef_turn -= targetDist;
-////			osDelay(10);
-//
-//			// Step 4: Turn left 90 degrees to face the second obstacle in its center
-//			FASTESTPATH_TURN_RIGHT_90();
-//            vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-//            horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
-//			osDelay(10);
 
-			// Step 5: Move in front until the car is 50 cm away from the second obstacle
-			osDelay(300);
-			vertical_distance_to_second_obs += obsDist_US;
-			targetDist = 50;
-			RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-			vertical_distance_to_second_obs -= obsDist_US;
-			osDelay(300);
+		    __SET_MOTOR_DIRECTION(DIR_FORWARD);
+
+		    // step 1. turn right for 300ms
+		    __SET_MOTOR_DUTY(&htim8, 3000, 800);
+		    __SET_SERVO_TURN(&htim1, right_turn_servo);
+		    task_start_tick = HAL_GetTick();
+
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 900){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		    }
+
+		    //step 2. turn left for 1200ms
+		    __SET_MOTOR_DUTY(&htim8, 800, 3000);
+			__SET_SERVO_TURN(&htim1, left_turn_servo);
+		    task_start_tick = HAL_GetTick();
+
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 1500){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		    }
+
+		    //step 3. turn right again for 700ms to centralise the car
+		    __SET_MOTOR_DUTY(&htim8, 3000, 800);
+		    __SET_SERVO_TURN(&htim1, 85);
+		    task_start_tick = HAL_GetTick();
+
+		    last_tick = HAL_GetTick();
+		    while(HAL_GetTick() - task_start_tick <= 1600){
+		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
+		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
+		          last_tick = HAL_GetTick();
+		        }
+		        if (angleNow < 20){
+		        	__SET_MOTOR_DUTY(&htim8, (int) (0.6*3000), (int) (0.6*800));
+		        }
+		    }
+
+		    __RESET_SERVO_TURN(&htim1);
+		    __SET_MOTOR_DUTY(&htim8, 0, 0);
+
+		    /*
+		     step 4. If obs is within 20cm from car, move back 40cm.
+		     Else, move to 40 cm before obs.
+		     Also note down the distance from car to second obs after turn.
+		     */
+
+		    vertical_distance_to_second_obs += first_obs_first_stop_dist + rear_dist_first_obs;
+
+		    // shoot US sensor to determine second obstacle distance
+		    obsDist_US = 0;
+		    HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_2);
+		    last_curTask_tick = HAL_GetTick();
+		    while(HAL_GetTick() - last_curTask_tick <= 10){
+		    	HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
+		    	__delay_us(&htim4, 10); // wait for 10us
+		    	HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
+		    	//	  HAL_TIM_Base_Start_IT(&htim4);
+		    	__HAL_TIM_ENABLE_IT(&htim4, TIM_IT_CC2);
+		    }
+		    HAL_TIM_IC_Stop_IT(&htim4, TIM_CHANNEL_2);
+		    osDelay(10);
+		    second_obs_dist = obsDist_US;
+		    vertical_distance_to_second_obs += obsDist_US;
+
+		    // Move to within 50cm from second obstacle
+		    targetDist = 40;
+		    if(obsDist_US < 20){
+		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    	vertical_distance_to_second_obs -= 40 - obsDist_US;
+		    }else{
+		    	targetDist = 50;
+		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    }
 
 			 __ON_TASK_END(&htim8, prevTask, curTask);
 
@@ -2783,7 +2794,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 
 
 	  osDelay(500); //give a short while for US to update value
-	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
+//	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
 
 	  for(;;)
 	  {
@@ -2811,48 +2822,47 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  //  Step 1: turn left 90 degree
 			  FASTESTPATH_TURN_LEFT_90();
 			  horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+//			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
 			  osDelay(10);
 
 			  // Step 2: Move straight for 30 cm
-			  targetDist = 30;
+			  targetDist = 50;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-			  horizontal_dist_bef_turn += 30;
+			  horizontal_dist_bef_turn += 50;
 			  osDelay(10);
 
-			  // Step 3: Turn right 90 Degree. Check using Ultrasonic sensor
-			  // if the obstacle is still in front
-			  FASTESTPATH_TURN_RIGHT_90();
-			  horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+			  // Step 3: Turn right 180 Degree.
+			  FASTESTPATH_TURN_RIGHT_180();
+			  horizontal_dist_bef_turn -= 3;
+			  vertical_distance_to_second_obs += 15;
 			  osDelay(300); //give a short while for US to update value
 
 
-			  // Step 4: If obstacle is still in front, come BACK RIGHT +++++ MOVE STRAIGHT FOR EXTRA 20CM
-			  // Repeat this until robot not in front of a obstacle
-			  while(obsDist_US <= dist_second_obs)
-			  {
-				// 4.1 Move back right
-                FASTESTPATH_TURN_BACK_RIGHT_90();
-				osDelay(10);
-
-				// determine what's the horizontal dist subtracted when moving BACK RIGHT
-				// will set it to 10 for now
-				vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
-				horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
-
-				// 4.2 Go in front 20 cm
-				targetDist = 20;
-                RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-				horizontal_dist_bef_turn += 20;
-                osDelay(10);
-
-				// 4.3 Turn right
-				FASTESTPATH_TURN_RIGHT_90();
-				horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
-				vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-				osDelay(300);
-			  }
+//			  // Step 4: If obstacle is still in front, come BACK RIGHT +++++ MOVE STRAIGHT FOR EXTRA 20CM
+//			  // Repeat this until robot not in front of a obstacle
+//			  while(obsDist_US <= dist_second_obs)
+//			  {
+//				// 4.1 Move back right
+//                FASTESTPATH_TURN_BACK_RIGHT_90();
+//				osDelay(10);
+//
+//				// determine what's the horizontal dist subtracted when moving BACK RIGHT
+//				// will set it to 10 for now
+//				vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
+//				horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
+//
+//				// 4.2 Go in front 20 cm
+//				targetDist = 20;
+//                RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+//				horizontal_dist_bef_turn += 20;
+//                osDelay(10);
+//
+//				// 4.3 Turn right
+//				FASTESTPATH_TURN_RIGHT_90();
+//				horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
+//				vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+//				osDelay(300);
+//			  }
 
 
 			  // use below if need to move in front of obstacle
@@ -2860,12 +2870,12 @@ void runFPSecondObsTurnLeftTask(void *argument)
 					// RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 					// osDelay(10);
 
-
-			  // Step 5: If obstacle is not in front, Turn right 90 Degree.
-			  FASTESTPATH_TURN_RIGHT_90();
-			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-			  osDelay(10);
+//
+//			  // Step 5: If obstacle is not in front, Turn right 90 Degree.
+//			  FASTESTPATH_TURN_RIGHT_90();
+//			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+//			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+//			  osDelay(10);
 
 			  // Step 6: Move Straight across obstacle distance to cross over
 			  targetDist = horizontal_dist_bef_turn * 2;
@@ -2895,7 +2905,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
 
 			  // Step 10: Move forward until before turn radius to center
-			  targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS;
+			  targetDist = horizontal_dist_bef_turn - 15;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			  osDelay(10);
 			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
@@ -2946,7 +2956,7 @@ void runFPSecondObsTurnRightTask(void *argument)
 	// CHECK IF NEED TO USE BL30 OR OTHER BL FORMS
 
 	  osDelay(300); //give a short while for US to update value
-	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
+//	  float dist_second_obs = obsDist_US; // record the dist of second obs from the car before executing turn
 
 	  for(;;)
 	  {
@@ -2974,45 +2984,44 @@ void runFPSecondObsTurnRightTask(void *argument)
 			  //  Step 1: turn right 90 degree
 			  FASTESTPATH_TURN_RIGHT_90();
               horizontal_dist_bef_turn += HORIZONTAL_TURN_RADIUS;
-              vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+//              vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
 			  osDelay(10);
 
-			  // Step 2: Move straight for 30 cm
-			  targetDist = 30;
+			  // Step 2: Move straight for 50 cm
+			  targetDist = 50;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-			  horizontal_dist_bef_turn += 30;
+			  horizontal_dist_bef_turn += 50;
 			  osDelay(10);
 
-			  // Step 3: Turn left 90 Degree. Check using Ultrasonic sensor
-			  // if the obstacle is still in front
-			  FASTESTPATH_TURN_LEFT_90();
-              horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
-              vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+			  // Step 3: Turn right 180 Degree.
+			  FASTESTPATH_TURN_LEFT_180();
+			  horizontal_dist_bef_turn -= 3;
+			  vertical_distance_to_second_obs += 15;
 			  osDelay(300); //give a short while for US to update value
 
 
 			  // Step 4: If obstacle is still in front, come BACK LEFT +++++ MOVE STRAIGHT FOR EXTRA 20CM
 			  // and repeat Step 3.
-			  while(obsDist_US <= dist_second_obs)
-			  {
-				// 4.1 Move back left
-                FASTESTPATH_TURN_BACK_LEFT_90();
-                  vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
-                  horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
-                  osDelay(10);
-
-				// 4.2 Go in front 20 cm
-				targetDist = 20;
-					  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
-				 horizontal_dist_bef_turn += 20;
-					  osDelay(10);
-
-				// 4.3 Turn left
-				FASTESTPATH_TURN_LEFT_90();
-                horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
-                vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
-				osDelay(300);
-			  }
+//			  while(obsDist_US <= dist_second_obs)
+//			  {
+//				// 4.1 Move back left
+//                FASTESTPATH_TURN_BACK_LEFT_90();
+//                  vertical_distance_to_second_obs -= HORIZONTAL_TURN_RADIUS;
+//                  horizontal_dist_bef_turn -= VERTICAL_TURN_RADIUS;
+//                  osDelay(10);
+//
+//				// 4.2 Go in front 20 cm
+//				targetDist = 20;
+//					  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
+//				 horizontal_dist_bef_turn += 20;
+//					  osDelay(10);
+//
+//				// 4.3 Turn left
+//				FASTESTPATH_TURN_LEFT_90();
+//                horizontal_dist_bef_turn += VERTICAL_TURN_RADIUS;
+//                vertical_distance_to_second_obs += HORIZONTAL_TURN_RADIUS;
+//				osDelay(300);
+//			  }
 
 
 			  // use below if need to move in front of obstacle
@@ -3022,10 +3031,10 @@ void runFPSecondObsTurnRightTask(void *argument)
 
 
 			  // Step 5: If obstacle is not in front, Turn left 90 Degree.
-			  FASTESTPATH_TURN_LEFT_90();
-			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
-			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
-			  osDelay(10);
+//			  FASTESTPATH_TURN_LEFT_90();
+//			  horizontal_dist_bef_turn -= HORIZONTAL_TURN_RADIUS;
+//			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
+//			  osDelay(10);
 
 			  // Step 6: Move Straight across obstacle distance to cross over
 			  targetDist = horizontal_dist_bef_turn * 2;
@@ -3051,7 +3060,7 @@ void runFPSecondObsTurnRightTask(void *argument)
 			  // vertical_distance_to_second_obs -= VERTICAL_TURN_RADIUS -- need to care about vert dist?
 
 			  // Step 10: Move forward until before turn radius to center
-              targetDist = horizontal_dist_bef_turn - VERTICAL_TURN_RADIUS;
+              targetDist = horizontal_dist_bef_turn - 15;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			  osDelay(10);
 			  // vertical_distance_to_second_obs -= 50 -- need to care about vert dist?
