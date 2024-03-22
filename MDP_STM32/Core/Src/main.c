@@ -487,8 +487,8 @@ int main(void)
 
   PIDConfigInit(&pidTSlow, 2.5, 0.0,0.8);
   PIDConfigInit(&pidSlow, 3.8, 0.0,0);
-  PIDConfigInit(&pidFast, 1.5, 0.0,0);
-  PIDConfigInit(&pidServo, 3.5, 0.0,0);
+  PIDConfigInit(&pidFast, 1.5, 0.4,2.5);
+  PIDConfigInit(&pidServo, 20, 0.0,0);
 
 //  PIDConfigInit(&pidFast, 0.75, 0.0,0);
 
@@ -1857,36 +1857,36 @@ void runOledTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-//	gyroZPrint=0;previousGyroZPrint=0;angleNowPrint=0;
-//		last_curTask_tick = HAL_GetTick();
-//		for (;;) {
-//			if (HAL_GetTick() - last_curTask_tick >= 20) { // sample gyro every 10ms
-//				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint, previousGyroZPrint);
-//				  angleNowPrint += gyroZPrint / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
-//				  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNowPrint);
-//				  OLED_ShowString(0, 0, (char *) ch);
-//				  snprintf(ch, sizeof(ch), "gyroZ: %" PRIu16, gyroZPrint);
-//				  OLED_ShowString(0, 30, (char *) ch);
-//				  last_curTask_tick = HAL_GetTick();
+	gyroZPrint=0;previousGyroZPrint=0;angleNowPrint=0;
+		last_curTask_tick = HAL_GetTick();
+		for (;;) {
+			if (HAL_GetTick() - last_curTask_tick >= 20) { // sample gyro every 10ms
+				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint, previousGyroZPrint);
+				  angleNowPrint += gyroZPrint / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
+				  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
+				  OLED_ShowString(0, 0, (char *) ch);
+				  snprintf(ch, sizeof(ch), "gyroZ: %" PRIu16, gyroZPrint);
+				  OLED_ShowString(0, 30, (char *) ch);
+				  last_curTask_tick = HAL_GetTick();
+
+			  }
+			snprintf(ch, sizeof(ch), "US_dist: %.2lf" , obsDist_US);
+			OLED_ShowString(0, 50, (char *) ch);
+			OLED_Refresh_Gram();
+//			osDelay(250);
+		}
+//	for(;;){
+//		snprintf(ch, sizeof(ch), "vert: %d", (int) vertical_distance_to_second_obs);
+//	    OLED_ShowString(0, 0, (char *) ch);
 //
-//			  }
-//			snprintf(ch, sizeof(ch), "US_dist: %.2lf" , obsDist_US);
-//			OLED_ShowString(0, 50, (char *) ch);
-//			OLED_Refresh_Gram();
-////			osDelay(250);
-//		}
-	for(;;){
-		snprintf(ch, sizeof(ch), "vert: %d", (int) vertical_distance_to_second_obs);
-	    OLED_ShowString(0, 0, (char *) ch);
-
-	    snprintf(ch, sizeof(ch), "horiz: %d", (int) horizontal_dist_bef_turn);
-	    OLED_ShowString(0, 30, (char *) ch);
-
-
-
-	    OLED_Refresh_Gram();
-	    osDelay(250);
-	}
+//	    snprintf(ch, sizeof(ch), "horiz: %d", (int) horizontal_dist_bef_turn);
+//	    OLED_ShowString(0, 30, (char *) ch);
+//
+//
+//
+//	    OLED_Refresh_Gram();
+//	    osDelay(250);
+//	}
 
 
 //  for(;;)
@@ -2479,7 +2479,7 @@ void runMoveDistObsTask(void *argument)
 
 		  // Step 1. Get US sensor reading
 		  last_curTask_tick = HAL_GetTick();
-		  while(HAL_GetTick() - last_curTask_tick <= 10){
+		  while(HAL_GetTick() - last_curTask_tick >= 10){
 			  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_SET);  // pull the TRIG pin HIGH
 			  __delay_us(&htim4, 10); // wait for 10us
 			  HAL_GPIO_WritePin(TRI_GPIO_Port, TRI_Pin, GPIO_PIN_RESET);  // pull the TRIG pin low
@@ -2490,7 +2490,7 @@ void runMoveDistObsTask(void *argument)
 		  osDelay(10);
 		  first_obs_first_stop_dist += obsDist_US;
 		  targetDist = (float) curCmd.val;
-		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		  RobotMoveDistObstacle(&targetDist, SPEED_MODE_1);
 		  osDelay(300);
 		  RPI_ACK_COUNT++;
 
@@ -2532,7 +2532,7 @@ void runFPFirstObsTurnLeftTask(void *argument)
   /* Infinite loop */
 
   // config values
-  int left_turn_servo = 38;
+  int left_turn_servo = 40;
   int right_turn_servo = 90;
   float rear_dist_first_obs = 5;
 
@@ -2540,6 +2540,7 @@ void runFPFirstObsTurnLeftTask(void *argument)
   uint32_t last_tick = 0;
   uint32_t task_start_tick = 0;
   angleNow = 0; gyroZ = 0;
+  previousGyroZ=0;
 
 
 
@@ -2564,7 +2565,7 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 700){
+		    while(HAL_GetTick() - task_start_tick <= 1000){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2573,12 +2574,12 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    }
 
 		    //step 2. turn right for 1200ms
-		    __SET_MOTOR_DUTY(&htim8, 3000, 800);
+		    __SET_MOTOR_DUTY(&htim8, 4000, 800);
 			__SET_SERVO_TURN(&htim1, right_turn_servo);
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 1700){
+		    while(HAL_GetTick() - task_start_tick <=950){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2587,12 +2588,12 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    }
 
 		    //step 3. turn left again for 700ms to centralise the car
-		    __SET_MOTOR_DUTY(&htim8, 800, 3000);
-		    __SET_SERVO_TURN(&htim1, left_turn_servo);
+		    __SET_MOTOR_DUTY(&htim8, 300, 4000);
+		    __SET_SERVO_TURN(&htim1, left_turn_servo-20);
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(angleNow > 5 && (HAL_GetTick() - task_start_tick <= 1600)){
+		    while((HAL_GetTick() - task_start_tick <= 1500)){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2631,15 +2632,14 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    second_obs_dist = obsDist_US;
 		    vertical_distance_to_second_obs += obsDist_US;
 
-		    // Move to within 50cm from second obstacle
-		    targetDist = 40;
+		    // Move to within 20cm from second obstacle
+		    // Account for backward movements from second obs
 		    if(obsDist_US < 20){
-		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-		    	vertical_distance_to_second_obs -= 40 - obsDist_US;
-		    }else{
-		    	targetDist = 50;
-		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    	vertical_distance_to_second_obs -= 20 - obsDist_US;
 		    }
+
+		    targetDist = 30;
+			RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
 
 
 		  __ON_TASK_END(&htim8, prevTask, curTask);
@@ -2666,8 +2666,8 @@ void runFPFirstObsTurnRightTask(void *argument)
 	/* Infinite loop */
 
     // config values
-    int left_turn_servo = 38;
-    int right_turn_servo = 90;
+    int left_turn_servo = 16;
+    int right_turn_servo = 60;
     float rear_dist_first_obs = 5;
 
     // gyro measurements
@@ -2696,7 +2696,7 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 700){
+		    while(HAL_GetTick() - task_start_tick <= 1260){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2705,12 +2705,12 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    }
 
 		    //step 2. turn left for 1200ms
-		    __SET_MOTOR_DUTY(&htim8, 800, 3000);
+		    __SET_MOTOR_DUTY(&htim8, 400, 4600);
 			__SET_SERVO_TURN(&htim1, left_turn_servo);
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 1700){
+		    while(HAL_GetTick() - task_start_tick <= 690){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2719,12 +2719,12 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    }
 
 		    //step 3. turn right again for 700ms to centralise the car
-		    __SET_MOTOR_DUTY(&htim8, 3000, 800);
-		    __SET_SERVO_TURN(&htim1, 85);
+		    __SET_MOTOR_DUTY(&htim8, 4500, 300);
+		    __SET_SERVO_TURN(&htim1, 81);
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 1600){
+		    while(HAL_GetTick() - task_start_tick <= 900){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
 		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
@@ -2762,15 +2762,14 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    second_obs_dist = obsDist_US;
 		    vertical_distance_to_second_obs += obsDist_US;
 
-		    // Move to within 50cm from second obstacle
-		    targetDist = 40;
+		    // Move to within 20cm from second obstacle
+		    // Account for backward movements from second obs
 		    if(obsDist_US < 20){
-		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
-		    	vertical_distance_to_second_obs -= 40 - obsDist_US;
-		    }else{
-		    	targetDist = 50;
-		    	RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
+		    	vertical_distance_to_second_obs -= 20 - obsDist_US;
 		    }
+
+		    targetDist = 30;
+			RobotMoveDistObstacle(&targetDist, SPEED_MODE_2);
 
 			 __ON_TASK_END(&htim8, prevTask, curTask);
 
@@ -2836,7 +2835,7 @@ void runFPSecondObsTurnLeftTask(void *argument)
 //			  vertical_distance_to_second_obs += VERTICAL_TURN_RADIUS;
 			  osDelay(10);
 
-			  // Step 2: Move straight for 30 cm
+			  // Step 2: Move straight for 50 cm
 			  targetDist = 50;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_2);
 			  horizontal_dist_bef_turn += 50;
