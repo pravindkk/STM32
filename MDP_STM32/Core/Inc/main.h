@@ -28,6 +28,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
+#include "../../PeripheralDrivers/Inc/ICM20948.h"
+#include "../../PeripheralDrivers/Inc/ICM20948_ADDR.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -140,11 +142,8 @@ extern "C" {
 	cfg.ekSum = 0; \
 })
 
-#define __Gyro_Read_Z(_I2C, readGyroData, gyroZ, previousGyroZ) ({ \
-	HAL_I2C_Mem_Read(_I2C,ICM20948__I2C_SLAVE_ADDRESS_1 << 1, ICM20948__USER_BANK_0__GYRO_ZOUT_H__REGISTER, I2C_MEMADD_SIZE_8BIT, readGyroData, 2, 0xFFFF); \
-	gyroZ = readGyroData[0] << 8 | readGyroData[1]; \
-	gyroZ = ALPHA * (gyroZ) + (1 - ALPHA) * previousGyroZ; \
-	previousGyroZ = gyroZ; \
+#define __Gyro_Read_Z(_I2C, readGyroData, _gyroZ) ({ \
+		HAL_I2C_Mem_Read(_I2C,ICM20948__I2C_SLAVE_ADDRESS_1 << 1, ICM20948__USER_BANK_0__GYRO_ZOUT_H__REGISTER, I2C_MEMADD_SIZE_8BIT, readGyroData, 2, 0xFFFF); \
 })
 
 #define __ADC_Read_Dist(_ADC, dataPoint, IR_data_raw_acc, obsDist, obsTick) ({ \

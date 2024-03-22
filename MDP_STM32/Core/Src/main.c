@@ -213,7 +213,7 @@ uint16_t lastDistTick_L = 0;
 
 float angleNowPrint = 0;
 uint8_t readGyroZDataPrint[2];
-int16_t gyroZPrint;
+int16_t* gyroZPrint;
 int16_t previousGyroZPrint;
 
 typedef struct _pidConfig {
@@ -1320,7 +1320,7 @@ int new_servo_value = 49;
 //PIDConfig curPIDConfig;
 
 void StraightLineMove(const uint8_t speedMode) {
-	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ); // polling
+	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint); // polling
 	dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3) ? 1 : -1; // use only one of the wheel to determine car direction
 	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ*0.01 ); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 
@@ -1335,7 +1335,7 @@ void StraightLineMove(const uint8_t speedMode) {
 }
 
 void StraightLineMoveSpeedScale(const uint8_t speedMode, float * speedScale) {
-	__Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ); // polling
+	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint); // polling
 	dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3) ? 1 : -1; // use only one of the wheel to determine car direction
 	angleNow += ((gyroZ >= -4 && gyroZ <= 11) ? 0 : gyroZ * 0.01); // / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 	if (speedMode == SPEED_MODE_1) __PID_SPEED_1(pidSlow, angleNow, correction, dir, newDutyL, newDutyR);
@@ -1463,7 +1463,7 @@ void RobotTurn(float * targetAngle, CmdConfig cfgs) {
 	last_curTask_tick = HAL_GetTick();
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
 		  tmpAngle = angleNow;
 //		  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
@@ -1553,7 +1553,7 @@ void RobotTurn_V2(float * targetAngle) {
 	last_curTask_tick = HAL_GetTick();
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
 		  last_curTask_tick = HAL_GetTick();
@@ -1600,7 +1600,7 @@ void RobotTurn_V2(float * targetAngle) {
 			last_curTask_tick = HAL_GetTick();
 			do {
 			  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
-				  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 				  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
 				  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
 				  if (angleNow - *targetAngle < -2) break;
@@ -1614,7 +1614,7 @@ void RobotTurn_V2(float * targetAngle) {
 			last_curTask_tick = HAL_GetTick();
 			do {
 			  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
-				  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 				  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
 				  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
 				  if (angleNow - *targetAngle > 2) break;
@@ -1630,7 +1630,7 @@ void RobotTurn_V2(float * targetAngle) {
 			last_curTask_tick = HAL_GetTick();
 				do {
 				  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
-					  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+					  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 					  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
 					  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
 					  if (angleNow - *targetAngle < -2) break;
@@ -1644,7 +1644,7 @@ void RobotTurn_V2(float * targetAngle) {
 			last_curTask_tick = HAL_GetTick();
 				do {
 				  if (HAL_GetTick() - last_curTask_tick >= 30) { // sample gyro every 10ms
-					  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+					  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 					  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.03;  //
 					  __SET_MOTOR_DUTY(&htim8, 1800, 1800);
 					  if (angleNow - *targetAngle > 2) break;
@@ -1694,7 +1694,7 @@ void RobotTurnFastest(float * targetAngle) {
 	last_curTask_tick = HAL_GetTick();
 	do {
 	  if (HAL_GetTick() - last_curTask_tick >= 10) { // sample gyro every 10ms
-		  __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		  angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		  if (abs(angleNow - *targetAngle) < 0.01) break;
 		  last_curTask_tick = HAL_GetTick();
@@ -1858,21 +1858,22 @@ void runOledTask(void *argument)
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
 	gyroZPrint=0;previousGyroZPrint=0;angleNowPrint=0;
-		last_curTask_tick = HAL_GetTick();
+		uint32_t last_gyro_tick = HAL_GetTick();
 		for (;;) {
-			if (HAL_GetTick() - last_curTask_tick >= 20) { // sample gyro every 10ms
-				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint, previousGyroZPrint);
-				  angleNowPrint += gyroZPrint / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;  //
-				  snprintf(ch, sizeof(ch), "angle:%-3.2lf", (float) angleNow);
+			if (HAL_GetTick() - last_gyro_tick >= 10) { // sample gyro every 10ms
+				  __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
+				  angleNowPrint = angleNowPrint + (*gyroZPrint) * 0.01;  //
+				  last_gyro_tick = HAL_GetTick();
+				  sprintf(ch, "angle:%-3.2f", angleNowPrint);
 				  OLED_ShowString(0, 0, (char *) ch);
-				  snprintf(ch, sizeof(ch), "gyroZ: %" PRIu16, gyroZPrint);
 				  OLED_ShowString(0, 30, (char *) ch);
-				  last_curTask_tick = HAL_GetTick();
+//				  snprintf(ch, sizeof(ch), "US_dist: %.2lf" , obsDist_US);
+//				  OLED_ShowString(0, 50, (char *) ch);
+
 
 			  }
-			snprintf(ch, sizeof(ch), "US_dist: %.2lf" , obsDist_US);
-			OLED_ShowString(0, 50, (char *) ch);
-			OLED_Refresh_Gram();
+
+//			OLED_Refresh_Gram();
 //			osDelay(250);
 		}
 //	for(;;){
@@ -2565,9 +2566,9 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while(HAL_GetTick() - task_start_tick <= 1000){
+		    while(HAL_GetTick() - task_start_tick <= 1100){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		        	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
@@ -2581,7 +2582,7 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    last_tick = HAL_GetTick();
 		    while(HAL_GetTick() - task_start_tick <=950){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		        	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
@@ -2593,9 +2594,9 @@ void runFPFirstObsTurnLeftTask(void *argument)
 		    task_start_tick = HAL_GetTick();
 
 		    last_tick = HAL_GetTick();
-		    while((HAL_GetTick() - task_start_tick <= 1500)){
+		    while((HAL_GetTick() - task_start_tick <= 1400)){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		        	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
@@ -2698,7 +2699,7 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    last_tick = HAL_GetTick();
 		    while(HAL_GetTick() - task_start_tick <= 1260){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		        	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
@@ -2712,7 +2713,7 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    last_tick = HAL_GetTick();
 		    while(HAL_GetTick() - task_start_tick <= 690){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		        	__Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
@@ -2726,7 +2727,7 @@ void runFPFirstObsTurnRightTask(void *argument)
 		    last_tick = HAL_GetTick();
 		    while(HAL_GetTick() - task_start_tick <= 900){
 		        if (HAL_GetTick() - last_tick >= 10) { // sample gyro every 10ms
-		          __Gyro_Read_Z(&hi2c1, readGyroZData, gyroZ, previousGyroZ);
+		          __Gyro_Read_Z(&hi2c1, readGyroZDataPrint, gyroZPrint);
 		          angleNow += gyroZ / GRYO_SENSITIVITY_SCALE_FACTOR_2000DPS * 0.01;
 		          last_tick = HAL_GetTick();
 		        }
