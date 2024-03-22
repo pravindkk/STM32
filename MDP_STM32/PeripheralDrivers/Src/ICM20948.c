@@ -221,7 +221,7 @@ void ICM20948_readGyroscope_allAxises(I2C_HandleTypeDef * hi2c, uint8_t const se
 	}
 }
 
-void ICM20948_readGyroscope_Z(I2C_HandleTypeDef * hi2c, uint8_t const selectI2cAddress, uint8_t const selectGyroSensitivity, int16_t *gyroZ) {
+void ICM20948_readGyroscope_Z(I2C_HandleTypeDef * hi2c, uint8_t const selectI2cAddress, int16_t *gyroZ) {
 //	HAL_StatusTypeDef status = HAL_OK;
 //	status =
 //	_ICM20948_SelectUserBank(hi2c, selectI2cAddress, USER_BANK_0);  no need, already at bank 0
