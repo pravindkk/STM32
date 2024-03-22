@@ -2272,14 +2272,14 @@ void runFRTask(void *argument)
 			  osDelay(10);
 			  break;
 		  default: // FR00 (indoor 3x1) CALIBRATED
-			  targetDist = 7;
+			  targetDist = 5.7;
 			  //targetDist = 3.5 no battery
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_FR00], &htim8, &htim1, targetAngle);
 			  RobotTurn(&targetAngle, cfgs[CONFIG_FR00]);
 			  osDelay(10);
-			  targetDist = 15.5;
+			  targetDist = 16;
 			  RobotMoveDist(&targetDist, DIR_BACKWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  break;
@@ -2399,7 +2399,7 @@ void runBRTask(void *argument)
 			  break;
 		  default: // BR00 (indoor 3x1)
 			  //targetDist = 7;
-			  targetDist = 11;
+			  targetDist = 12;
 			  RobotMoveDist(&targetDist, DIR_FORWARD, SPEED_MODE_T);
 			  osDelay(10);
 			  __SET_CMD_CONFIG(cfgs[CONFIG_BR00], &htim8, &htim1, targetAngle);
